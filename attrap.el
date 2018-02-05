@@ -30,9 +30,9 @@
 
 ;; Attrap! provides a command to attempt to fix the flycheck error at point.
 ;;
-;; Users: Invoke the command `attrap-attrap' on a flycheck error, and
-;; check the results.  Attrap! currently comes with fixers for
-;; `haskell-dante' and `emacs-lisp'.
+;; Users: Invoke the command `attrap-attrap' when point is on a
+;; flycheck error, and check the results.  Attrap! currently comes
+;; with builtin fixers for `haskell-dante' and `emacs-lisp'.
 ;;
 ;; Emacs mode providers: mode-dependent fixers can be declared by
 ;; setting the relevant flycheck checker symbol `attrap-fixers'
