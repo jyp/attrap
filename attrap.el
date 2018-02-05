@@ -42,10 +42,11 @@
 ;; repair.  (Thus a list of options is an alist.) The repair is a
 ;; function of no argument which is meant to apply one fix suggested
 ;; by MSG in the current buffer, at point.  The description is meant
-;; to be a summarized user-facing description of the repair, for
-;; example for selecting the best repair.  An option can be
-;; conveniently defined using `attrap-option'.  A singleton option
-;; list can be conveniently defined using `attrap-one-option'.
+;; to be a summarized user-facing s-expr which describes the repair.
+;; This description can be used for example for selecting the best
+;; repair.  An option can be conveniently defined using
+;; `attrap-option'.  A singleton option list can be conveniently
+;; defined using `attrap-one-option'.
 
 
 ;;; Code:
