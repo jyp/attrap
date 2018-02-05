@@ -57,15 +57,23 @@
 (defun attrap-attrap (pos)
   "Attempt to fix the issue at POS automatically."
   (interactive "d")
-  (let ((messages (-non-nil (-map #'flycheck-error-message
-                                  (flycheck-overlay-errors-at pos))))
+  (let ((messages (-filter
+                   #'car
+                   (--map (list (flycheck-error-message
+                                 (overlay-get it 'flycheck-error))
+                                (overlay-start it))
+                          (flycheck-overlays-at pos))))
         (checker (flycheck-get-checker-for-buffer)))
     (when (not messages) (error "No flycheck message at point"))
+    (message "awutn:%s" messages)
     (when (not checker) (error "No flycheck-checker for current buffer"))
-    (let ((msg (car messages)) ; todo: try all messages
-          (fixers (get checker 'attrap-fixers)))
+    (let ((fixers (get checker 'attrap-fixers)))
       (when (not fixers) (error "No fixers for flycheck-checker %s" checker))
-      (let* ((options (-non-nil (--mapcat (funcall it msg) fixers)))
+      (let* ((options (-non-nil (-mapcat
+                                 (lambda (msg) (-mapcat
+                                                (lambda (fixer) (apply fixer msg))
+                                                fixers))
+                                 messages)))
              (named-options (--map (cons (format "%s" (car it)) (cdr it)) options)))
         (when (not options) (error "No fixer applies to the issue at point"))
         (let ((selected-fix (if (eq 1 (length options))
@@ -108,7 +116,7 @@ value is a list which is appended to the result of attrap-alternatives.
 usage: (attrap-alternatives CLAUSES...)"
   `(append ,@(mapcar (lambda (c) `(when ,(car c) ,@(cdr c))) clauses)))
 
-(defun attrap-elisp-fixer (msg)
+(defun attrap-elisp-fixer (msg pos)
   "An `attrap' fixer for any elisp warning given as MSG."
   (attrap-alternatives
    ((string-match "White space found at end of line" msg)
@@ -141,8 +149,16 @@ usage: (attrap-alternatives CLAUSES...)"
 
 (put 'emacs-lisp 'attrap-fixers (list 'attrap-elisp-fixer))
 
-(defun attrap-ghc-fixer (msg)
-  "An `attrap' fixer for any GHC error or warning given as MSG."
+
+(defun attrap--search-here (string)
+  "Search for STRING if the point if within it."
+  (let ((p (point)))
+    (forward-char (length string))
+    (message "ASH: %s" string)
+    (search-backward string (- p (length string)) nil)))
+
+(defun attrap-ghc-fixer (msg pos)
+  "An `attrap' fixer for any GHC error or warning given as MSG and reported at POS."
   (cond
    ((string-match "Redundant constraints?: (?\\([^,)\n]*\\)" msg)
     (attrap-one-option 'delete-reduntant-constraint
@@ -169,9 +185,13 @@ usage: (attrap-alternatives CLAUSES...)"
         (skip-chars-forward "\n\t ") ; skip spaces
         (insert (concat missing-constraint " => ")))))
    ((string-match "Unticked promoted constructor: ‘\\(.*\\)’" msg)
-    (attrap-one-option 'tick-promoted-constructor
-      (attrap-search-here (match-string 1))
-      (insert "'")))
+    (let ((constructor (match-string 1 msg)))
+      (attrap-one-option 'tick-promoted-constructor
+        (goto-char pos)
+        ;; when the constructor is infix, flycheck reports the wrong position.
+        (search-forward constructor)
+        (backward-char (length constructor))
+        (insert "'"))))
    ((string-match "Patterns not matched:" msg)
     (attrap-one-option 'add-missing-patterns
       (let ((patterns (mapcar #'string-trim (split-string (substring msg (match-end 0)) "\n" t " ")))) ;; patterns to match
@@ -186,7 +206,7 @@ usage: (attrap-alternatives CLAUSES...)"
             (insert (concat pattern " -> _")))))))
    ((string-match "A do-notation statement discarded a result of type" msg)
     (attrap-one-option 'explicitly-discard-result
-      (goto-char (car (dante-ident-pos-at-point)))
+      (goto-char pos)
       (insert "_ <- ")))
    ((string-match "Failed to load interface for ‘\\(.*\\)’\n[ ]*Perhaps you meant[ \n]*\\([^ ]*\\)" msg)
     (attrap-one-option 'rename-module-import
