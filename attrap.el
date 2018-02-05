@@ -53,9 +53,9 @@
 (require 's)
 (require 'flycheck)
 
-
+;;;###autoload
 (defun attrap-attrap (pos)
-  "Attempt to fix the issue at POS automatically."
+  "Attempt to repair the flycheck error at POS."
   (interactive "d")
   (let ((messages (-filter
                    #'car
