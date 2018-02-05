@@ -116,7 +116,7 @@ value is a list which is appended to the result of attrap-alternatives.
 usage: (attrap-alternatives CLAUSES...)"
   `(append ,@(mapcar (lambda (c) `(when ,(car c) ,@(cdr c))) clauses)))
 
-(defun attrap-elisp-fixer (msg pos)
+(defun attrap-elisp-fixer (msg _)
   "An `attrap' fixer for any elisp warning given as MSG."
   (attrap-alternatives
    ((string-match "White space found at end of line" msg)
@@ -243,7 +243,7 @@ usage: (attrap-alternatives CLAUSES...)"
       (insert (concat (substring msg (match-end 0)) "\n"))))
    ((string-match "Defined but not used" msg)
     (attrap-one-option 'add-underscore
-      (goto-char (car (dante-ident-pos-at-point)))
+      (goto-char pos)
       (insert "_")))
    ((string-match "Unused quantified type variable ‘\\(.*\\)’" msg)
     (attrap-one-option 'delete-type-variable
@@ -259,11 +259,13 @@ usage: (attrap-alternatives CLAUSES...)"
     (attrap-one-option 'delete-module-import
       (beginning-of-line)
       (delete-region (point) (progn (next-logical-line) (point)))))
-   ((string-match "Found type wildcard ‘.*’[ \t\n]*standing for ‘\\(.*\\)’" msg)
+   ((string-match "Found type wildcard ‘\\(.*\\)’[ \t\n]*standing for ‘\\(.*\\)’" msg)
     (attrap-one-option 'explicit-type-wildcard
-      (let ((type-expr (match-string 1 msg)))
-        (apply #'delete-region (dante-ident-pos-at-point))
-        (insert (concat "(" type-expr ")")))))
+      (let ((wildcard (match-string 1 msg))
+            (type-expr (match-string 2 msg)))
+        (goto-char pos)
+        (search-forward wildcard)
+        (replace-match (concat "(" type-expr ")")))))
    ((--any? (s-matches? it msg) attrap-haskell-extensions)
     (--map (attrap-option (list 'use-extension it)
              (goto-char 1)
