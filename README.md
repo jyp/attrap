@@ -7,3 +7,11 @@ and check the results.  Attrap! currently comes with fixers for
 `haskell-dante` and `emacs-lisp`. Support for other flycheck
 checkers can be added dynamically (see `attrap.el`).
 
+Installation with `use-package`:
+
+```
+(use-package attrap
+  :ensure t
+  :bind (("C-x /" . attrap-attrap))) ;; use any binding of your choice
+```
+
