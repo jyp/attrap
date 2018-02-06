@@ -260,7 +260,7 @@ usage: (attrap-alternatives CLAUSES...)"
     (attrap-one-option 'delete-module-import
       (beginning-of-line)
       (delete-region (point) (progn (next-logical-line) (point)))))
-   ((string-match "Found type wildcard ‘\\(.*\\)’[ \t\n]*standing for ‘\\(.*\\)’" msg)
+   ((string-match "Found type wildcard ‘\\(.*\\)’[ \t\n]*standing for ‘\\([^’]*\\)’" msg)
     (attrap-one-option 'explicit-type-wildcard
       (let ((wildcard (match-string 1 msg))
             (type-expr (match-string 2 msg)))
