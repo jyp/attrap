@@ -150,14 +150,6 @@ usage: (attrap-alternatives CLAUSES...)"
 
 (put 'emacs-lisp 'attrap-fixers (list 'attrap-elisp-fixer))
 
-
-(defun attrap--search-here (string)
-  "Search for STRING if the point if within it."
-  (let ((p (point)))
-    (forward-char (length string))
-    (message "ASH: %s" string)
-    (search-backward string (- p (length string)) nil)))
-
 (defun attrap-ghc-fixer (msg pos)
   "An `attrap' fixer for any GHC error or warning given as MSG and reported at POS."
   (cond
