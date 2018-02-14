@@ -66,7 +66,6 @@
                           (flycheck-overlays-at pos))))
         (checker (flycheck-get-checker-for-buffer)))
     (when (not messages) (error "No flycheck message at point"))
-    (message "awutn:%s" messages)
     (when (not checker) (error "No flycheck-checker for current buffer"))
     (let ((fixers (get checker 'attrap-fixers)))
       (when (not fixers) (error "No fixers for flycheck-checker %s" checker))
@@ -219,16 +218,22 @@ usage: (attrap-alternatives CLAUSES...)"
         (skip-chars-backward " \t")
         (unless (looking-back "(" (- (point) 2)) (insert ","))
         (insert missing))))
-   ((string-match "not in scope: \\([^ ]*\\)" msg)
+    ;; Not in scope: data constructor ‘SimpleBroadcast’
+    ;; Perhaps you meant ‘SimpleBroadCast’ (imported from TypedFlow.Types)
+
+    ((string-match (s-join "\\|"
+                           '("Variable not in scope:[ \n\t]*\\(?1:[^ \n]*\\)"
+                             "not in scope: data constructor ‘\\(?1:[^’]*\\)’"))
+                   msg)
     (let* ((delete (match-string 1 msg))
            (delete-has-paren (eq ?\( (elt delete 0)))
            (delete-no-paren (if delete-has-paren (substring delete 1 (1- (length delete))) delete))
            (replacements (s-match-strings-all "‘\\([^‘]*\\)’ (\\([^)]*\\))" msg)))
       (--map (attrap-option (list 'replace delete-no-paren (nth 1 it) (nth 2 it))
-               ;; ^^ delete-region may garble the matches
                (goto-char pos)
-               (search-forward delete-no-paren (+ (length delete) pos))
-               (replace-match (nth 1 it)))
+               (let ((case-fold-search nil))
+                 (search-forward delete-no-paren (+ (length delete) pos))
+                 (replace-match (nth 1 it) t)))
              replacements)))
    ((string-match "\\(Top-level binding\\|Pattern synonym\\) with no type signature:[\n ]*" msg)
     (attrap-one-option 'add-signature
@@ -258,7 +263,7 @@ usage: (attrap-alternatives CLAUSES...)"
             (type-expr (match-string 2 msg)))
         (goto-char pos)
         (search-forward wildcard)
-        (replace-match (concat "(" type-expr ")")))))
+        (replace-match (concat "(" type-expr ")") t))))
    ((--any? (s-matches? it msg) attrap-haskell-extensions)
     (--map (attrap-option (list 'use-extension it)
              (goto-char 1)
