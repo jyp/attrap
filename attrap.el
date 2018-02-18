@@ -258,8 +258,12 @@ usage: (attrap-alternatives CLAUSES...)"
    ((string-match "The import of ‘\\(.*\\)’ from module ‘[^’]*’ is redundant" msg)
     (attrap-one-option 'delete-import
       (let ((redundant (match-string 1 msg)))
-        (search-forward redundant)
-        (replace-match "")
+        (dolist (r (s-split ", " redundant t))
+          (save-excursion
+            ;; todo check for operators
+            ;; toto search for full words
+            (search-forward r)
+            (replace-match "")))
         (when (looking-at ",") (delete-char 1)))))
    ((string-match "The import of ‘[^’]*’ is redundant" msg)
     (attrap-one-option 'delete-module-import
