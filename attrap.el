@@ -221,13 +221,16 @@ usage: (attrap-alternatives CLAUSES...)"
     ;; Perhaps you meant ‘SimpleBroadCast’ (imported from TypedFlow.Types)
 
     ((string-match (s-join "\\|"
-                           '("Variable not in scope:[ \n\t]*\\(?1:[^ \n]*\\)"
-                             "not in scope: data constructor ‘\\(?1:[^’]*\\)’"))
+                           '("Data constructor not in scope:[ \n\t]*\\(?1:[^ \n]*\\)"
+                             "Variable not in scope:[ \n\t]*\\(?1:[^ \n]*\\)"
+                             "not in scope: data constructor ‘\\(?1:[^’]*\\)’"
+                             "not in scope: type constructor or class ‘\\(?1:[^’]*\\)’"
+                             )) ; in patterns
                    msg)
     (let* ((delete (match-string 1 msg))
            (delete-has-paren (eq ?\( (elt delete 0)))
            (delete-no-paren (if delete-has-paren (substring delete 1 (1- (length delete))) delete))
-           (replacements (s-match-strings-all "‘\\([^‘]*\\)’ (\\([^)]*\\))" msg)))
+           (replacements (s-match-strings-all "‘\\([^’]*\\)’ (\\([^)]*\\))" msg)))
       (--map (attrap-option (list 'replace delete-no-paren (nth 1 it) (nth 2 it))
                (goto-char pos)
                (let ((case-fold-search nil))
