@@ -31,21 +31,22 @@
 ;; Attrap! provides a command to attempt to fix the flycheck error at point.
 ;;
 ;; Users: Invoke the command `attrap-attrap' when point is on a
-;; flycheck error, and check the results.  Attrap! currently comes
-;; with builtin fixers for `haskell-dante' and `emacs-lisp'.
+;; flycheck error, and check the results.  (If several fixes apply you
+;; will be asked which one to apply.) Attrap! currently comes with
+;; builtin fixers for `haskell-dante' and `emacs-lisp'.
 ;;
-;; Emacs mode providers: mode-dependent fixers can be declared by
-;; setting the relevant flycheck checker symbol `attrap-fixers'
-;; property.  This property is a list of fixers.  A fixer is a element
-;; is a side-effect-free function mapping an error message MSG to a
-;; list of options.  An option is a cons of a description and a
-;; repair.  (Thus a list of options is an alist.) The repair is a
-;; function of no argument which is meant to apply one fix suggested
-;; by MSG in the current buffer, at point.  The description is meant
-;; to be a summarized user-facing s-expr which describes the repair.
-;; This description can be used for example for selecting the best
-;; repair.  An option can be conveniently defined using
-;; `attrap-option'.  A singleton option list can be conveniently
+;; Configuration: attrap-fixers is an alist from flycheck checker
+;; symbol to attrap fixer.  All the See below for the definition of a fixer.
+;;
+;; A fixer is a element is a side-effect-free function mapping an
+;; error message MSG to a list of options.  An option is a cons of a
+;; description and a repair.  (Thus a list of options is an alist.)
+;; The repair is a function of no argument which is meant to apply one
+;; fix suggested by MSG in the current buffer, at point.  The
+;; description is meant to be a summarized user-facing s-expr which
+;; describes the repair.  This description can be used for example for
+;; selecting the best repair.  An option can be conveniently defined
+;; using `attrap-option'.  A singleton option list can be conveniently
 ;; defined using `attrap-one-option'.
 
 
@@ -53,6 +54,12 @@
 (require 'dash)
 (require 's)
 (require 'flycheck)
+
+(defcustom attrap-fixers-alist '((haskell-dante . attrap-ghc-fixer)
+                                 (emacs-lisp . attrap-elisp-fixer))
+  "An alist from flycheck checker symbol to attrap fixer."
+  :type '(alist :key-type symbol :value-type function)
+  :group 'attrap)
 
 ;;;###autoload
 (defun attrap-attrap (pos)
@@ -67,7 +74,7 @@
         (checker (flycheck-get-checker-for-buffer)))
     (when (not messages) (error "No flycheck message at point"))
     (when (not checker) (error "No flycheck-checker for current buffer"))
-    (let ((fixers (get checker 'attrap-fixers)))
+    (let ((fixers (-map #'cdr (--filter (eq (car it) checker) attrap-fixers-alist))))
       (when (not fixers) (error "No fixers for flycheck-checker %s" checker))
       (let* ((options (-non-nil (-mapcat
                                  (lambda (msg) (-mapcat
@@ -90,7 +97,8 @@
 (defcustom attrap-haskell-extensions
   '("AllowAmbiguousTypes" "BangPatterns" "ConstraintKinds" "DataKinds" "DeriveFoldable" "DeriveFunctor" "DeriveGeneric" "DeriveTraversable" "EmptyCase" "FlexibleContexts" "FlexibleInstances" "FunctionalDependencies" "GADTs" "GeneralizedNewtypeDeriving" "InstanceSigs" "KindSignatures" "MultiParamTypeClasses" "PartialTypeSignatures" "PatternSynonyms" "PolyKinds" "RankNTypes" "RecordWildCards" "ScopedTypeVariables" "StandaloneDeriving" "TransformListComp" "TupleSections" "TypeApplications" "TypeFamilies" "TypeInType" "TypeOperators" "TypeSynonymInstances" "UndecidableSuperClasses" "UndecidableInstances" "ViewPatterns" )
   "Language extensions that Attrap can use to fix errors."
-  :type '(repeat string))
+  :type '(repeat string)
+  :group 'attrap)
 
 (defmacro attrap-option (description &rest body)
   "Create an attrap option with DESCRIPTION and BODY."
@@ -145,8 +153,6 @@ usage: (attrap-alternatives CLAUSES...)"
       (end-of-line)
       (backward-char)
       (insert ".")))))
-
-(put 'emacs-lisp 'attrap-fixers (list 'attrap-elisp-fixer))
 
 (defun attrap-ghc-fixer (msg pos)
   "An `attrap' fixer for any GHC error or warning given as MSG and reported at POS."
@@ -272,7 +278,6 @@ usage: (attrap-alternatives CLAUSES...)"
              (insert (concat "{-# LANGUAGE " it " #-}\n")))
            (--filter (s-matches? it msg) attrap-haskell-extensions)))))
 
-(put 'haskell-dante 'attrap-fixers (list 'attrap-ghc-fixer))
 (provide 'attrap)
 ;;; attrap.el ends here
 
