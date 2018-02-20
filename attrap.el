@@ -38,9 +38,9 @@
 ;; Configuration: attrap-fixers is an alist from flycheck checker
 ;; symbol to attrap fixer.  All the See below for the definition of a fixer.
 ;;
-;; A fixer is a element is a side-effect-free function mapping an
-;; error message MSG to a list of options.  An option is a cons of a
-;; description and a repair.  (Thus a list of options is an alist.)
+;; A fixer is a side-effect-free function mapping an error message MSG 
+;; to a list of options.  An option is a cons of a description and a repair.
+;; (Thus a list of options is an alist.)
 ;; The repair is a function of no argument which is meant to apply one
 ;; fix suggested by MSG in the current buffer, at point.  The
 ;; description is meant to be a summarized user-facing s-expr which
