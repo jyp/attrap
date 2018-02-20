@@ -1,7 +1,7 @@
 * Attrap: Emacs mode to fix the flycheck error at point
 
-[[https://melpa.org/packages/dante-badge.svg]]
-[[https://stable.melpa.org/#/dante][https://stable.melpa.org/packages/dante-badge.svg]]
+[[https://melpa.org/packages/attrap-badge.svg]]
+[[https://stable.melpa.org/#/dante][https://stable.melpa.org/packages/attrap-badge.svg]]
 
 Attrap! provides a command to attempt to fix the flycheck error at point.
 
