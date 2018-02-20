@@ -1,0 +1,20 @@
+* Attrap: Emacs mode to fix the flycheck error at point
+
+[[https://melpa.org/packages/dante-badge.svg]]
+[[https://stable.melpa.org/#/dante][https://stable.melpa.org/packages/dante-badge.svg]]
+
+Attrap! provides a command to attempt to fix the flycheck error at point.
+
+Invoke the command ~attrap-attrap~ when point is on a flycheck error,
+and check the results.  Attrap! currently comes with fixers for
+~haskell-dante~ and ~emacs-lisp~. Support for other flycheck
+checkers can be added dynamically (see ~attrap.el~).
+
+Installation with ~use-package~:
+
+#+BEGIN_SRC elisp
+(use-package attrap
+  :ensure t
+  :bind (("C-x /" . attrap-attrap))) ;; use any binding of your choice
+#+END_SRC
+
