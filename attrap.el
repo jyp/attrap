@@ -217,6 +217,14 @@ usage: (attrap-alternatives CLAUSES...)"
         (search-forward (match-string 1 msg))
         (delete-region (match-beginning 0) (point))
         (insert replacement))))
+   ((string-match "Unsupported extension: \\(.*\\)\n[ ]*Perhaps you meant ‘\\([^‘]*\\)’" msg)
+    (attrap-one-option 'rename-extension
+      (let ((replacement (match-string 2 msg)))
+        ;; ^^ delete-region may garble the matches
+        (goto-char pos)
+        (search-forward (match-string 1 msg))
+        (delete-region (match-beginning 0) (point))
+        (insert replacement))))
    ((string-match "Perhaps you want to add ‘\\(.*\\)’ to the import list[\n\t ]+in the import of[ \n\t]*‘.*’[\n\t ]+([^:]*:\\([0-9]*\\):[0-9]*-\\([0-9]*\\))" msg)
     (attrap-one-option 'add-to-import-list
       (let ((missing (match-string 1 msg))
