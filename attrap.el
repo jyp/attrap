@@ -126,6 +126,11 @@ usage: (attrap-alternatives CLAUSES...)"
 (defun attrap-elisp-fixer (msg _)
   "An `attrap' fixer for any elisp warning given as MSG."
   (attrap-alternatives
+   ((string-match "Name emacs should appear capitalized as Emacs" msg)
+    (attrap-one-option 'capitalize-emacs
+      (let ((case-fold-search nil))
+        (re-search-forward "emacs" (line-end-position))
+        (replace-match "Emacs" nil t nil 0))))
    ((string-match "White space found at end of line" msg)
     (attrap-one-option 'delete-trailing-space
       (end-of-line)
