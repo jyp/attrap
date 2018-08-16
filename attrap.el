@@ -113,6 +113,7 @@
     "InstanceSigs"
     "KindSignatures"
     "MultiParamTypeClasses"
+    "NamedFieldPuns"
     "PartialTypeSignatures"
     "PatternSynonyms"
     "PolyKinds"
