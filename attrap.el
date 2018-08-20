@@ -31,12 +31,15 @@
 ;; Attrap! provides a command to attempt to fix the flycheck error at point.
 ;;
 ;; Users: Invoke the command `attrap-attrap' when point is on a
-;; flycheck error, and check the results.  (If several fixes apply you
-;; will be asked which one to apply.) Attrap! currently comes with
-;; builtin fixers for `haskell-dante' and `emacs-lisp'.
+;; flycheck or flymake error, and check the results.  (If several
+;; fixes apply you will be asked which one to apply.) Attrap!
+;; currently comes with builtin fixers for haskell (GHC messages) and
+;; elisp.
 ;;
-;; Configuration: attrap-fixers is an alist from flycheck checker
-;; symbol to attrap fixer.  All the See below for the definition of a fixer.
+;; Configuration: `attrap-flymake-backends-alist' is an alist from
+;; flymake backend to attrap fixer.  `attrap-flycheck-checkers-alist'
+;; is an alist from flycheck checker symbol to attrap fixer.  All the
+;; See below for the definition of a fixer.
 ;;
 ;; A fixer is a element is a side-effect-free function mapping an
 ;; error message MSG to a list of options.  An option is a cons of a
@@ -55,44 +58,82 @@
 (require 's)
 (require 'flycheck)
 
-(defcustom attrap-fixers-alist '((haskell-dante . attrap-ghc-fixer)
-                                 (emacs-lisp . attrap-elisp-fixer))
+(defcustom attrap-flycheck-checkers-alist '((haskell-dante . attrap-ghc-fixer)
+                                            (emacs-lisp . attrap-elisp-fixer))
   "An alist from flycheck checker symbol to attrap fixer."
   :type '(alist :key-type symbol :value-type function)
   :group 'attrap)
 
+(defcustom attrap-flymake-backends-alist
+  '((dante-flymake . attrap-ghc-fixer)
+    (elisp-flymake-byte-compile . attrap-elisp-fixer)
+    (elisp-flymake-checkdoc . attrap-elisp-fixer))
+  "An alist from flymake backend to attrap fixer."
+  :type '(alist :key-type symbol :value-type function)
+  :group 'attrap)
+
+(defun attrap-select-and-apply-option (options)
+  "Ask the user which of OPTIONS is best, then apply it."
+  (when (not options) (error "No fixer applies to the issue at point"))
+  (let* ((named-options (--map (cons (format "%s" (car it)) (cdr it)) options))
+         (selected-fix (if (eq 1 (length options))
+                           (car options)
+                         (assoc (completing-read "repair using: "
+                                                 named-options
+                                                 nil
+                                                 t)
+                                named-options))))
+    (message "Applied %s" (car selected-fix))
+    (save-excursion
+      (funcall (cdr selected-fix)))))
+
 ;;;###autoload
-(defun attrap-attrap (pos)
+(defun attrap-flymake (pos)
+  "Attempt to repair the flymake error at POS."
+  (interactive "d")
+  (let ((diags (flymake-diagnostics pos)))
+    (when (not diags) (error "No flymake diagnostic at point"))
+    (attrap-select-and-apply-option
+     (-non-nil (--mapcat (let ((fixer (alist-get (flymake-diagnostic-backend it)
+                                                 attrap-flymake-backends-alist)))
+                           (when fixer (funcall fixer
+                                                (flymake-diagnostic-text it)
+                                                (flymake-diagnostic-beg it)
+                                                (flymake-diagnostic-end it))))
+                         diags)))))
+
+
+;;;###autoload
+(defun attrap-flycheck (pos)
   "Attempt to repair the flycheck error at POS."
   (interactive "d")
   (let ((messages (-filter
                    #'car
                    (--map (list (flycheck-error-message
                                  (overlay-get it 'flycheck-error))
-                                (overlay-start it))
+                                (overlay-start it)
+                                (overlay-end it))
                           (flycheck-overlays-at pos))))
         (checker (flycheck-get-checker-for-buffer)))
     (when (not messages) (error "No flycheck message at point"))
     (when (not checker) (error "No flycheck-checker for current buffer"))
-    (let ((fixers (-map #'cdr (--filter (eq (car it) checker) attrap-fixers-alist))))
+    (let ((fixers (-map #'cdr (--filter (eq (car it) checker) attrap-flycheck-checkers-alist))))
       (when (not fixers) (error "No fixers for flycheck-checker %s" checker))
-      (let* ((options (-non-nil (-mapcat
-                                 (lambda (msg) (-mapcat
-                                                (lambda (fixer) (apply fixer msg))
-                                                fixers))
-                                 messages)))
-             (named-options (--map (cons (format "%s" (car it)) (cdr it)) options)))
-        (when (not options) (error "No fixer applies to the issue at point"))
-        (let ((selected-fix (if (eq 1 (length options))
-                                (car options)
-                              (assoc (completing-read "repair using: "
-                                                      named-options
-                                                      nil
-                                                      t)
-                                     named-options))))
-          (message "Applied %s" (car selected-fix))
-          (save-excursion
-            (funcall (cdr selected-fix))))))))
+      (attrap-select-and-apply-option
+       (-non-nil (-mapcat
+                  (lambda (msg) (-mapcat
+                                 (lambda (fixer) (apply fixer msg))
+                                 fixers))
+                  messages))))))
+
+;;;###autoload
+(defun attrap-attrap (pos)
+  "Attempt to repair the error at POS."
+  (interactive "d")
+  (cond
+   ((bound-and-true-p flymake-mode) (attrap-flymake pos))
+   ((bound-and-true-p flycheck-mode) (attrap-flycheck pos))
+   (t (error "Expecting flymake or flycheck to be active"))))
 
 (defcustom attrap-haskell-extensions
   '("AllowAmbiguousTypes"
@@ -154,11 +195,11 @@
 Each clause looks like (CONDITION BODY...).  CONDITION is evaluated
 and, if the value is non-nil, this clause succeeds:
 then the expressions in BODY are evaluated and the last one's
-value is a list which is appended to the result of attrap-alternatives.
+value is a list which is appended to the result of `attrap-alternatives'.
 usage: (attrap-alternatives CLAUSES...)"
   `(append ,@(mapcar (lambda (c) `(when ,(car c) ,@(cdr c))) clauses)))
 
-(defun attrap-elisp-fixer (msg _)
+(defun attrap-elisp-fixer (msg _beg _end)
   "An `attrap' fixer for any elisp warning given as MSG."
   (attrap-alternatives
    ((string-match "Name emacs should appear capitalized as Emacs" msg)
@@ -194,8 +235,8 @@ usage: (attrap-alternatives CLAUSES...)"
       (backward-char)
       (insert ".")))))
 
-(defun attrap-ghc-fixer (msg pos)
-  "An `attrap' fixer for any GHC error or warning given as MSG and reported at POS."
+(defun attrap-ghc-fixer (msg pos _end)
+  "An `attrap' fixer for any GHC error or warning given as MSG and reported between POS and END."
   (cond
    ((string-match "Redundant constraints?: (?\\([^,)\n]*\\)" msg)
     (attrap-one-option 'delete-reduntant-constraint
