@@ -314,12 +314,18 @@ usage: (attrap-alternatives CLAUSES...)"
         (insert missing))))
     ;; Not in scope: data constructor ‘SimpleBroadcast’
     ;; Perhaps you meant ‘SimpleBroadCast’ (imported from TypedFlow.Types)
-
+;;     Not in scope: ‘BackCore.argmax’
+;;     Perhaps you meant one of these:
+;;       ‘BackCore.argMax’ (imported from TensorFlow.GenOps.Core),
+;;       ‘BackCore.argMax'’ (imported from TensorFlow.GenOps.Core),
+;;       ‘BackCore.max’ (imported from TensorFlow.GenOps.Core)
+;;     Module ‘TensorFlow.GenOps.Core’ does not export ‘argmax’.
     ((string-match (s-join "\\|"
                            '("Data constructor not in scope:[ \n\t]*\\(?1:[^ \n]*\\)"
                              "Variable not in scope:[ \n\t]*\\(?1:[^ \n]*\\)"
                              "not in scope: data constructor ‘\\(?1:[^’]*\\)’"
                              "not in scope: type constructor or class ‘\\(?1:[^’]*\\)’"
+                             "Not in scope: ‘\\(?1:[^’]*\\)’"
                              )) ; in patterns
                    msg)
     (let* ((delete (match-string 1 msg))
