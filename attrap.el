@@ -140,6 +140,7 @@
     "BangPatterns"
     "ConstraintKinds"
     "DataKinds"
+    "DefaultSignatures"
     "DeriveAnyClass"
     "DeriveFoldable"
     "DeriveFunctor"
