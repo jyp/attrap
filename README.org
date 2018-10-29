@@ -18,3 +18,11 @@ Installation with ~use-package~:
   :bind (("C-x /" . attrap-attrap))) ;; use any binding of your choice
 #+END_SRC
 
+** Note for GHC users
+
+Attrap assumes that GHC outputs unicode symbols in error messages,
+which will happen only if $LANG is set to a proper value, such as
+
+#+BEGIN_SRC shell
+export LANG=en_US.UTF-8 
+#+END_SRC
