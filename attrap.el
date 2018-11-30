@@ -147,6 +147,7 @@
     "DeriveGeneric"
     "DeriveTraversable"
     "EmptyCase"
+    "EmptyDataDecls"
     "FlexibleContexts"
     "FlexibleInstances"
     "FunctionalDependencies"
