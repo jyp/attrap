@@ -289,11 +289,11 @@ usage: (attrap-alternatives CLAUSES...)"
     (attrap-one-option 'explicitly-discard-result
       (goto-char pos)
       (insert "_ <- ")))
-   ((string-match "Failed to load interface for ‘\\(.*\\)’\n[ ]*Perhaps you meant[ \n]*\\([^ ]*\\)" msg)
+   ((string-match "\\(Failed to load interface for\\|Could not find module\\) ‘\\(.*\\)’\n[ ]*Perhaps you meant[ \n]*\\([^ ]*\\)" msg)
     (attrap-one-option 'rename-module-import
-      (let ((replacement (match-string 2 msg)))
+      (let ((replacement (match-string 3 msg)))
         ;; ^^ delete-region may garble the matches
-        (search-forward (match-string 1 msg))
+        (search-forward (match-string 2 msg))
         (delete-region (match-beginning 0) (point))
         (insert replacement))))
    ((string-match "Unsupported extension: \\(.*\\)\n[ ]*Perhaps you meant ‘\\([^‘]*\\)’" msg)
