@@ -322,7 +322,6 @@ usage: (attrap-alternatives CLAUSES...)"
 ;;       ‘BackCore.argMax’ (imported from TensorFlow.GenOps.Core),
 ;;       ‘BackCore.argMax'’ (imported from TensorFlow.GenOps.Core),
 ;;       ‘BackCore.max’ (imported from TensorFlow.GenOps.Core)
-;;     Module ‘TensorFlow.GenOps.Core’ does not export ‘argmax’.
     ((string-match (s-join "\\|"
                            '("Data constructor not in scope:[ \n\t]*\\(?1:[^ \n]*\\)"
                              "Variable not in scope:[ \n\t]*\\(?1:[^ \n]*\\)"
@@ -353,9 +352,11 @@ usage: (attrap-alternatives CLAUSES...)"
     (attrap-one-option 'delete-type-variable
       ;; note there can be a kind annotation, not just a variable.
       (delete-region (point) (+ (point) (- (match-end 1) (match-beginning 1))))))
-   ((string-match "The import of ‘\\(.*\\)’ from module ‘[^’]*’ is redundant" normalized-msg)
+   ;;     Module ‘TensorFlow.GenOps.Core’ does not export ‘argmax’.
+
+   ((string-match "The import of ‘\\(.*\\)’ from module ‘[^’]*’ is redundant\\|Module ‘.*’ does not export ‘\\(.*\\)’" normalized-msg)
     (attrap-one-option 'delete-import
-      (let ((redundant (match-string 1 normalized-msg)))
+      (let ((redundant (or (match-string 1 normalized-msg) (match-string 2 normalized-msg))))
         (dolist (r (s-split ", " redundant t))
           (save-excursion
             ;; todo check for operators
