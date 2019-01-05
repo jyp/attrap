@@ -317,11 +317,11 @@ usage: (attrap-alternatives CLAUSES...)"
         (insert missing))))
     ;; Not in scope: data constructor ‘SimpleBroadcast’
     ;; Perhaps you meant ‘SimpleBroadCast’ (imported from TypedFlow.Types)
-;;     Not in scope: ‘BackCore.argmax’
-;;     Perhaps you meant one of these:
-;;       ‘BackCore.argMax’ (imported from TensorFlow.GenOps.Core),
-;;       ‘BackCore.argMax'’ (imported from TensorFlow.GenOps.Core),
-;;       ‘BackCore.max’ (imported from TensorFlow.GenOps.Core)
+    ;;     Not in scope: ‘BackCore.argmax’
+    ;;     Perhaps you meant one of these:
+    ;;       ‘BackCore.argMax’ (imported from TensorFlow.GenOps.Core),
+    ;;       ‘BackCore.argMax'’ (imported from TensorFlow.GenOps.Core),
+    ;;       ‘BackCore.max’ (imported from TensorFlow.GenOps.Core)
     ((string-match (s-join "\\|"
                            '("Data constructor not in scope:[ \n\t]*\\(?1:[^ \n]*\\)"
                              "Variable not in scope:[ \n\t]*\\(?1:[^ \n]*\\)"
@@ -340,6 +340,12 @@ usage: (attrap-alternatives CLAUSES...)"
                  (search-forward delete-no-paren (+ (length delete) pos))
                  (replace-match (nth 1 it) t)))
              replacements)))
+    ((string-match "It could refer to either" msg) ;; ambiguous identifier
+     (let ((replacements (--map (nth 1 it) (s-match-strings-all  "‘\\([^‘]*\\)’," msg))))
+       (--map (attrap-option (list 'rename it)
+                (apply #'delete-region (dante-ident-pos-at-point))
+                (insert it))
+              replacements)))
    ((string-match "\\(Top-level binding\\|Pattern synonym\\) with no type signature:[\n ]*" msg)
     (attrap-one-option 'add-signature
       (beginning-of-line)
