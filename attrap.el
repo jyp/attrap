@@ -164,6 +164,7 @@
     "RecordWildCards"
     "ScopedTypeVariables"
     "StandaloneDeriving"
+    "TemplateHaskell"
     "TransformListComp"
     "TupleSections"
     "TypeApplications"
