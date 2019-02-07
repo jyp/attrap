@@ -148,6 +148,7 @@
     "DeriveTraversable"
     "EmptyCase"
     "EmptyDataDecls"
+    "EmptyDataDeriving"
     "ExplicitNamespaces"
     "FlexibleContexts"
     "FlexibleInstances"
