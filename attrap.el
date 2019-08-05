@@ -159,6 +159,7 @@
     "KindSignatures"
     "MultiParamTypeClasses"
     "NamedFieldPuns"
+    "ParallelListComp"
     "PartialTypeSignatures"
     "PatternSynonyms"
     "PolyKinds"
