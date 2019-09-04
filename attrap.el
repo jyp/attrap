@@ -326,7 +326,7 @@ usage: (attrap-alternatives CLAUSES...)"
         (move-to-column (1- end-col))
         (skip-chars-backward " \t")
         (unless (looking-back "(" (- (point) 2)) (insert ","))
-        (insert missing))))
+        (insert (attrap-add-operator-parens missing)))))
     ;; Not in scope: data constructor ‘SimpleBroadcast’
     ;; Perhaps you meant ‘SimpleBroadCast’ (imported from TypedFlow.Types)
     ;;     Not in scope: ‘BackCore.argmax’
@@ -399,6 +399,12 @@ usage: (attrap-alternatives CLAUSES...)"
              (goto-char 1)
              (insert (concat "{-# LANGUAGE " it " #-}\n")))
            (--filter (s-matches? it msg) attrap-haskell-extensions))))))
+
+(defun attrap-add-operator-parens (name)
+  "Add parens around a NAME if it refers to a Haskell operator."
+  (if (string-match-p "^[[:upper:][:lower:]_']" name)
+      name
+    (concat "(" name ")")))
 
 (provide 'attrap)
 ;;; attrap.el ends here
