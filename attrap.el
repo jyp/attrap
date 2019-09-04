@@ -183,7 +183,8 @@
   :group 'attrap)
 
 (defmacro attrap-option (description &rest body)
-  "Create an attrap option with DESCRIPTION and BODY."
+  "Create an attrap option with DESCRIPTION and BODY.
+The body is code that performs the fix."
   (declare (indent 1))
   `(let ((saved-match-data (match-data)))
      (cons ,description
@@ -245,6 +246,13 @@ usage: (attrap-alternatives CLAUSES...)"
   "An `attrap' fixer for any GHC error or warning given as MSG and reported between POS and END."
   (let ((normalized-msg (s-collapse-whitespace msg)))
   (cond
+   ((string-match "Valid hole fits include" msg)
+    (let* ((options (-map 'cadr (-non-nil (--map (s-match "[ ]*\\(.*\\) ::" it) (s-split "\n" (substring msg (match-end 0))))))))
+      (--map (attrap-option (list 'plug-hole it)
+                     (goto-char pos)
+                     (delete-char 1)
+                     (insert it))
+             options)))
    ((string-match "Redundant constraints?: (?\\([^,)\n]*\\)" msg)
     (attrap-one-option 'delete-reduntant-constraint
       (let ((constraint (match-string 1 msg)))
