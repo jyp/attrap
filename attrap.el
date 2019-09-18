@@ -9,7 +9,7 @@
 ;; Created: February 2018
 ;; Keywords: programming, tools
 ;; Package-Requires: ((dash "2.12.0") (emacs "25.1") (f "0.19.0") (flycheck "0.30") (s "1.11.0"))
-;; Version: 0.1
+;; Version: 0.2
 
 ;; This file is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -131,6 +131,9 @@
   "Attempt to repair the error at POS."
   (interactive "d")
   (cond
+   ((and (bound-and-true-p flyspell-mode)
+         (-any #'flyspell-overlay-p (overlays-at (point))))
+    (flyspell-correct-at-point))
    ((bound-and-true-p flymake-mode) (attrap-flymake pos))
    ((bound-and-true-p flycheck-mode) (attrap-flycheck pos))
    (t (error "Expecting flymake or flycheck to be active"))))
