@@ -152,6 +152,7 @@
     "EmptyCase"
     "EmptyDataDecls"
     "EmptyDataDeriving"
+    "ExistentialQuantification"
     "ExplicitNamespaces"
     "FlexibleContexts"
     "FlexibleInstances"
