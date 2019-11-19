@@ -167,6 +167,7 @@
     "PartialTypeSignatures"
     "PatternSynonyms"
     "PolyKinds"
+    "QuantifiedConstraints"
     "RankNTypes"
     "RecordWildCards"
     "ScopedTypeVariables"
