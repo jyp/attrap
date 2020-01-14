@@ -161,6 +161,7 @@
     "GeneralizedNewtypeDeriving"
     "InstanceSigs"
     "KindSignatures"
+    "LambdaCase"
     "MultiParamTypeClasses"
     "NamedFieldPuns"
     "ParallelListComp"
