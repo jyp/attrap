@@ -133,6 +133,8 @@
   (cond
    ((and (bound-and-true-p flyspell-mode)
          (-any #'flyspell-overlay-p (overlays-at (point))))
+    (unless (fboundp 'flyspell-correct-at-point)
+      (error "Expecting the package flyspell-correct-ivy to be installed."))
     (flyspell-correct-at-point))
    ((bound-and-true-p flymake-mode) (attrap-flymake pos))
    ((bound-and-true-p flycheck-mode) (attrap-flycheck pos))
