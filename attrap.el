@@ -180,6 +180,7 @@
     "TupleSections"
     "TypeApplications"
     "TypeFamilies"
+    "TypeFamilyDependencies"
     "TypeInType"
     "TypeOperators"
     "TypeSynonymInstances"
