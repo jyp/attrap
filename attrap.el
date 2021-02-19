@@ -164,6 +164,7 @@
     "InstanceSigs"
     "KindSignatures"
     "LambdaCase"
+    "LinearTypes"
     "MultiParamTypeClasses"
     "NamedFieldPuns"
     "ParallelListComp"
