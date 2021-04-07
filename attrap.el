@@ -176,6 +176,7 @@
     "RecordWildCards"
     "ScopedTypeVariables"
     "StandaloneDeriving"
+    ; "StarIsType" ; not a 'cool' extension
     "TemplateHaskell"
     "TransformListComp"
     "TupleSections"
@@ -256,6 +257,15 @@ usage: (attrap-alternatives CLAUSES...)"
   "An `attrap' fixer for any GHC error or warning given as MSG and reported between POS and END."
   (let ((normalized-msg (s-collapse-whitespace msg)))
   (cond
+   ((string-match "Using ‘.*’ (or its Unicode variant) to mean ‘Data.Kind.Type’" msg)
+    (attrap-one-option 'replace-star-by-Type
+      (goto-char pos)
+      (delete-char 1)
+      (insert "Type")
+      (unless (search-backward-regexp "import.*Data\.Kind" nil t)
+        (search-backward-regexp "^module")
+        (end-of-line)
+        (insert "\nimport Data.Kind (Type)"))))
    ((string-match "Valid hole fits include" msg)
     (let* ((options (-map 'cadr (-non-nil (--map (s-match "[ ]*\\(.*\\) ::" it) (s-split "\n" (substring msg (match-end 0))))))))
       (--map (attrap-option (list 'plug-hole it)
