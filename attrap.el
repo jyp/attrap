@@ -220,6 +220,16 @@ usage: (attrap-alternatives CLAUSES...)"
 (defun attrap-elisp-fixer (msg _beg _end)
   "An `attrap' fixer for any elisp warning given as MSG."
   (attrap-alternatives
+   ((string-match "Lisp symbol ‘\\(.*\\)’ should appear in quotes" msg)
+    (attrap-one-option 'kill-message-period
+      (let ((sym (match-string 1 msg)))
+        (re-search-forward sym)
+        (replace-match (concat "`" sym "'") nil t nil 0))))
+   ((string-match "Error messages should \\*not\\* end with a period" msg)
+    (attrap-one-option 'kill-message-period
+      (let ((case-fold-search nil))
+        (re-search-forward "\\.\"" (line-end-position))
+        (replace-match "\"" nil t nil 0))))
    ((string-match "Name emacs should appear capitalized as Emacs" msg)
     (attrap-one-option 'capitalize-emacs
       (let ((case-fold-search nil))
