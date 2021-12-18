@@ -266,7 +266,20 @@ usage: (attrap-alternatives CLAUSES...)"
 (defun attrap-ghc-fixer (msg pos _end)
   "An `attrap' fixer for any GHC error or warning given as MSG and reported between POS and END."
   (let ((normalized-msg (s-collapse-whitespace msg)))
+    (message "normalized-msg = %s" normalized-msg)
   (cond
+   ((string-match "No explicit implementation for" msg)
+    (attrap-one-option 'insert-method
+      (let ((missings (s-match-strings-all "‘\\([^’]*\\)’"
+                                           (car (s-split-up-to "In the instance declaration" msg 1)))))
+        (end-of-line)
+        (dolist (missing missings)
+          (insert (format "\n  %s = _" (nth 1 missing)))))))
+   ((string-match "No explicit associated type or default declaration for ‘\\(.*\\)’" msg)
+    (attrap-one-option 'insert-type
+      (let ((type (match-string 1 msg)))
+        (end-of-line)
+        (insert (format "\n  type %s = _" type)))))
    ((string-match "Using ‘.*’ (or its Unicode variant) to mean ‘Data.Kind.Type’" msg)
     (attrap-one-option 'replace-star-by-Type
       (goto-char pos)
