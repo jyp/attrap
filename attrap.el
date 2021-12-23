@@ -263,24 +263,31 @@ usage: (attrap-alternatives CLAUSES...)"
       (backward-char)
       (insert ".")))))
 
+(defun attrap-insert-language-pragma (pragma)
+  (goto-char 1)
+  (insert (concat "{-# LANGUAGE " pragma " #-}\n")))
+
 (defun attrap-ghc-fixer (msg pos _end)
   "An `attrap' fixer for any GHC error or warning given as MSG and reported between POS and END."
   (let ((normalized-msg (s-collapse-whitespace msg)))
     (message "normalized-msg = %s" normalized-msg)
-  (cond
-   ((string-match "No explicit implementation for" msg)
+  (append
+   (when (string-match "Parse error in pattern: pattern" msg)
+    (attrap-one-option (list 'use-extension "PatternSynonyms")
+      (attrap-insert-language-pragma "PatternSynonyms")))
+   (when (string-match "No explicit implementation for" msg)
     (attrap-one-option 'insert-method
       (let ((missings (s-match-strings-all "‘\\([^’]*\\)’"
                                            (car (s-split-up-to "In the instance declaration" msg 1)))))
         (end-of-line)
         (dolist (missing missings)
           (insert (format "\n  %s = _" (nth 1 missing)))))))
-   ((string-match "No explicit associated type or default declaration for ‘\\(.*\\)’" msg)
+   (when (string-match "No explicit associated type or default declaration for ‘\\(.*\\)’" msg)
     (attrap-one-option 'insert-type
       (let ((type (match-string 1 msg)))
         (end-of-line)
         (insert (format "\n  type %s = _" type)))))
-   ((string-match "Using ‘.*’ (or its Unicode variant) to mean ‘Data.Kind.Type’" msg)
+   (when (string-match "Using ‘.*’ (or its Unicode variant) to mean ‘Data.Kind.Type’" msg)
     (attrap-one-option 'replace-star-by-Type
       (goto-char pos)
       (delete-char 1)
@@ -289,14 +296,14 @@ usage: (attrap-alternatives CLAUSES...)"
         (search-backward-regexp "^module")
         (end-of-line)
         (insert "\nimport Data.Kind (Type)"))))
-   ((string-match "Valid hole fits include" msg)
+   (when (string-match "Valid hole fits include" msg)
     (let* ((options (-map 'cadr (-non-nil (--map (s-match "[ ]*\\(.*\\) ::" it) (s-split "\n" (substring msg (match-end 0))))))))
       (--map (attrap-option (list 'plug-hole it)
                      (goto-char pos)
                      (delete-char 1)
                      (insert it))
              options)))
-   ((string-match "Redundant constraints?: (?\\([^,)\n]*\\)" msg)
+   (when (string-match "Redundant constraints?: (?\\([^,)\n]*\\)" msg)
     (attrap-one-option 'delete-reduntant-constraint
       (let ((constraint (match-string 1 msg)))
         (search-forward constraint) ; find type sig
@@ -305,12 +312,12 @@ usage: (attrap-alternatives CLAUSES...)"
           (delete-region (point) (search-forward ",")))
         (when (looking-at "[ \t]*=>")
           (delete-region (point) (search-forward "=>"))))))
-   ((string-match "The type signature for ‘\\(.*\\)’[ \t\n]*lacks an accompanying binding" msg)
+   (when (string-match "The type signature for ‘\\(.*\\)’[ \t\n]*lacks an accompanying binding" msg)
     (attrap-one-option 'add-binding
       (beginning-of-line)
       (forward-line)
       (insert (concat (match-string 1 msg) " = _\n"))))
-   ((string-match "add (\\(.*\\)) to the context of[\n ]*the type signature for:[ \n]*\\([^ ]*\\) ::" msg)
+   (when (string-match "add (\\(.*\\)) to the context of[\n ]*the type signature for:[ \n]*\\([^ ]*\\) ::" msg)
     (attrap-one-option 'add-constraint-to-context
       (let ((missing-constraint (match-string 1 msg))
             (function-name (match-string 2 msg)))
@@ -320,7 +327,7 @@ usage: (attrap-alternatives CLAUSES...)"
           (search-forward "."))
         (skip-chars-forward "\n\t ") ; skip spaces
         (insert (concat missing-constraint " => ")))))
-   ((string-match "Unticked promoted constructor: ‘\\(.*\\)’" msg)
+   (when (string-match "Unticked promoted constructor: ‘\\(.*\\)’" msg)
     (let ((constructor (match-string 1 msg)))
       (attrap-one-option 'tick-promoted-constructor
         (goto-char pos)
@@ -328,7 +335,7 @@ usage: (attrap-alternatives CLAUSES...)"
         (search-forward constructor)
         (backward-char (length constructor))
         (insert "'"))))
-   ((string-match "Patterns not matched:" msg)
+   (when (string-match "Patterns not matched:" msg)
     (attrap-one-option 'add-missing-patterns
       (let ((patterns (mapcar #'string-trim (split-string (substring msg (match-end 0)) "\n" t " ")))) ;; patterns to match
         (if (string-match "In an equation for ‘\\(.*\\)’:" msg)
@@ -340,18 +347,18 @@ usage: (attrap-alternatives CLAUSES...)"
           (dolist (pattern patterns)
             (insert "\n     ") ;; fixme: guess how much indent is needed.
             (insert (concat pattern " -> _")))))))
-   ((string-match "A do-notation statement discarded a result of type" msg)
+   (when (string-match "A do-notation statement discarded a result of type" msg)
     (attrap-one-option 'explicitly-discard-result
       (goto-char pos)
       (insert "_ <- ")))
-   ((string-match "\\(Failed to load interface for\\|Could not find module\\) ‘\\(.*\\)’\n[ ]*Perhaps you meant[ \n]*\\([^ ]*\\)" msg)
+   (when (string-match "\\(Failed to load interface for\\|Could not find module\\) ‘\\(.*\\)’\n[ ]*Perhaps you meant[ \n]*\\([^ ]*\\)" msg)
     (attrap-one-option 'rename-module-import
       (let ((replacement (match-string 3 msg)))
         ;; ^^ delete-region may garble the matches
         (search-forward (match-string 2 msg))
         (delete-region (match-beginning 0) (point))
         (insert replacement))))
-   ((string-match "Unsupported extension: \\(.*\\)\n[ ]*Perhaps you meant ‘\\([^‘]*\\)’" msg)
+   (when (string-match "Unsupported extension: \\(.*\\)\n[ ]*Perhaps you meant ‘\\([^‘]*\\)’" msg)
     (attrap-one-option 'rename-extension
       (let ((replacement (match-string 2 msg)))
         ;; ^^ delete-region may garble the matches
@@ -359,7 +366,7 @@ usage: (attrap-alternatives CLAUSES...)"
         (search-forward (match-string 1 msg))
         (delete-region (match-beginning 0) (point))
         (insert replacement))))
-   ((string-match "Perhaps you want to add ‘\\(.*\\)’ to the import list[\n\t ]+in the import of[ \n\t]*‘.*’[\n\t ]+([^:]*:\\([0-9]*\\):[0-9]*-\\([0-9]*\\))" msg)
+   (when (string-match "Perhaps you want to add ‘\\(.*\\)’ to the import list[\n\t ]+in the import of[ \n\t]*‘.*’[\n\t ]+([^:]*:\\([0-9]*\\):[0-9]*-\\([0-9]*\\))" msg)
     (attrap-one-option 'add-to-import-list
       (let ((missing (match-string 1 msg))
             (line (string-to-number (match-string 2 msg)))
@@ -377,7 +384,7 @@ usage: (attrap-alternatives CLAUSES...)"
     ;;       ‘BackCore.argMax’ (imported from TensorFlow.GenOps.Core),
     ;;       ‘BackCore.argMax'’ (imported from TensorFlow.GenOps.Core),
     ;;       ‘BackCore.max’ (imported from TensorFlow.GenOps.Core)
-    ((string-match (s-join "\\|"
+    (when (string-match (s-join "\\|"
                            '("Data constructor not in scope:[ \n\t]*\\(?1:[^ \n]*\\)"
                              "Variable not in scope:[ \n\t]*\\(?1:[^ \n]*\\)"
                              "not in scope: data constructor ‘\\(?1:[^’]*\\)’"
@@ -395,27 +402,27 @@ usage: (attrap-alternatives CLAUSES...)"
                  (search-forward delete-no-paren (+ (length delete) pos))
                  (replace-match (nth 1 it) t)))
              replacements)))
-    ((string-match "It could refer to either" msg) ;; ambiguous identifier
+    (when (string-match "It could refer to either" msg) ;; ambiguous identifier
      (let ((replacements (--map (nth 1 it) (s-match-strings-all  "‘\\([^‘]*\\)’," msg))))
        (--map (attrap-option (list 'rename it)
                 (apply #'delete-region (dante-ident-pos-at-point))
                 (insert it))
               replacements)))
-   ((string-match "\\(Top-level binding\\|Pattern synonym\\) with no type signature:[\n ]*" msg)
+   (when (string-match "\\(Top-level binding\\|Pattern synonym\\) with no type signature:[\n ]*" msg)
     (attrap-one-option 'add-signature
       (beginning-of-line)
       (insert (concat (substring msg (match-end 0)) "\n"))))
-   ((string-match "Defined but not used" msg)
+   (when (string-match "Defined but not used" msg)
     (attrap-one-option 'add-underscore
       (goto-char pos)
       (insert "_")))
-   ((string-match "Unused quantified type variable ‘\\(.*\\)’" msg)
+   (when (string-match "Unused quantified type variable ‘\\(.*\\)’" msg)
     (attrap-one-option 'delete-type-variable
       ;; note there can be a kind annotation, not just a variable.
       (delete-region (point) (+ (point) (- (match-end 1) (match-beginning 1))))))
    ;;     Module ‘TensorFlow.GenOps.Core’ does not export ‘argmax’.
 
-   ((string-match "The import of ‘\\(.*\\)’ from module ‘[^’]*’ is redundant\\|Module ‘.*’ does not export ‘\\(.*\\)’" normalized-msg)
+   (when (string-match "The import of ‘\\(.*\\)’ from module ‘[^’]*’ is redundant\\|Module ‘.*’ does not export ‘\\(.*\\)’" normalized-msg)
     (attrap-one-option 'delete-import
       (let ((redundant (or (match-string 1 normalized-msg) (match-string 2 normalized-msg))))
         (dolist (r (s-split ", " redundant t))
@@ -426,23 +433,22 @@ usage: (attrap-alternatives CLAUSES...)"
             (replace-match "")
             (when (looking-at "(..)") (delete-char 4))
             (when (looking-at ",") (delete-char 1)))))))
-   ((string-match "The import of ‘[^’]*’ is redundant" msg)
+   (when (string-match "The import of ‘[^’]*’ is redundant" msg)
     (attrap-one-option 'delete-module-import
       (beginning-of-line)
       (delete-region (point) (progn (next-logical-line) (point)))))
-   ((string-match "Found type wildcard ‘\\(.*\\)’[ \t\n]*standing for ‘\\([^’]*\\)’" msg)
+   (when (string-match "Found type wildcard ‘\\(.*\\)’[ \t\n]*standing for ‘\\([^’]*\\)’" msg)
     (attrap-one-option 'explicit-type-wildcard
       (let ((wildcard (match-string 1 msg))
             (type-expr (match-string 2 msg)))
         (goto-char pos)
         (search-forward wildcard)
         (replace-match (concat "(" type-expr ")") t))))
-   ((--any? (s-matches? it msg) attrap-haskell-extensions)
-    (--map (attrap-option (list 'use-extension it)
-             (goto-char 1)
-             (insert (concat "{-# LANGUAGE " it " #-}\n")))
-           (--filter (s-matches? it msg) attrap-haskell-extensions))))))
+   (--map (attrap-option (list 'use-extension it)
+            (attrap-insert-language-pragma it))
+          (--filter (s-matches? it normalized-msg) attrap-haskell-extensions)))))
 
+             
 (defun attrap-add-operator-parens (name)
   "Add parens around a NAME if it refers to a Haskell operator."
   (if (string-match-p "^[[:upper:][:lower:]_']" name)
