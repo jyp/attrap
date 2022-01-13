@@ -169,6 +169,7 @@
     "NamedFieldPuns"
     "ParallelListComp"
     "PartialTypeSignatures"
+    "PatternGuards"
     "PatternSynonyms"
     "PolyKinds"
     "QuantifiedConstraints"
