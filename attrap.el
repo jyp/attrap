@@ -165,6 +165,7 @@
     "KindSignatures"
     "LambdaCase"
     "LinearTypes"
+    "MonoLocalBinds"
     "MultiParamTypeClasses"
     "NamedFieldPuns"
     "ParallelListComp"
