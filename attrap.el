@@ -299,7 +299,7 @@ usage: (attrap-alternatives CLAUSES...)"
         (end-of-line)
         (insert "\nimport Data.Kind (Type)"))))
    (when (string-match "Valid hole fits include" msg)
-    (let* ((options (-map 'cadr (-non-nil (--map (s-match "[ ]*\\(.*\\) ::" it) (s-split "\n" (substring msg (match-end 0))))))))
+    (let* ((options (-map 'cadr (-non-nil (--map (s-match "[ ]*\\([^ ]*\\) ::" it) (s-split "\n" (substring msg (match-end 0))))))))
       (--map (attrap-option (list 'plug-hole it)
                      (goto-char pos)
                      (delete-char 1)
