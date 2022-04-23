@@ -279,7 +279,6 @@ usage: (attrap-alternatives CLAUSES...)"
 (defun attrap-ghc-fixer (msg pos _end)
   "An `attrap' fixer for any GHC error or warning given as MSG and reported between POS and END."
   (let ((normalized-msg (s-collapse-whitespace msg)))
-    (message "normalized-msg = %s" normalized-msg)
   (append
    (when (string-match "Parse error in pattern: pattern" msg)
     (attrap-one-option (list 'use-extension "PatternSynonyms")
