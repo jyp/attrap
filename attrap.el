@@ -178,6 +178,7 @@
     "RecordWildCards"
     "ScopedTypeVariables"
     "StandaloneDeriving"
+    "StandaloneKindSignatures"
     ; "StarIsType" ; not a 'cool' extension
     "TemplateHaskell"
     "TransformListComp"
