@@ -252,6 +252,10 @@ usage: (attrap-alternatives CLAUSES...)"
     (attrap-one-option 'add-empty-doc
       (beginning-of-line)
       (insert "  \"\"\n")))
+   ((string-match "should have documentation" msg)
+    (attrap-one-option 'add-empty-doc
+      (beginning-of-line)
+      (insert "  \"\"\n")))
    ((string-match "The footer should be: " msg)
     (let ((footer (s-replace "\\n" "\n" (substring msg (match-end 0)))))
       (attrap-one-option 'add-footer
