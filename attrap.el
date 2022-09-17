@@ -147,6 +147,7 @@
     "DataKinds"
     "DefaultSignatures"
     "DeriveAnyClass"
+    "DeriveDataTypeable"
     "DeriveFoldable"
     "DeriveFunctor"
     "DeriveGeneric"
