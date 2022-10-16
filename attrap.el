@@ -155,6 +155,7 @@
     "DataKinds"
     "DefaultSignatures"
     "DeriveAnyClass"
+    "DeriveDataTypeable"
     "DeriveFoldable"
     "DeriveFunctor"
     "DeriveGeneric"
@@ -169,6 +170,7 @@
     "FunctionalDependencies"
     "GADTs"
     "GeneralizedNewtypeDeriving"
+    "ImportQualifiedPost"
     "InstanceSigs"
     "KindSignatures"
     "LambdaCase"
@@ -286,7 +288,6 @@ usage: (attrap-alternatives CLAUSES...)"
 (defun attrap-ghc-fixer (msg pos _end)
   "An `attrap' fixer for any GHC error or warning given as MSG and reported between POS and END."
   (let ((normalized-msg (s-collapse-whitespace msg)))
-    (message "normalized-msg = %s" normalized-msg)
   (append
    (when (string-match "Parse error in pattern: pattern" msg)
     (attrap-one-option (list 'use-extension "PatternSynonyms")
@@ -460,11 +461,27 @@ usage: (attrap-alternatives CLAUSES...)"
         (goto-char pos)
         (search-forward wildcard)
         (replace-match (concat "(" type-expr ")") t))))
+   (when (and (string-match-p "parse error on input ‘case’" msg)
+              (save-excursion
+                (goto-char pos)
+                (string-match-p (rx "\\case\\_>") (buffer-substring-no-properties pos (line-end-position)))))
+     (attrap-one-option (list 'use-extension "LambdaCase")
+                        (attrap-insert-language-pragma "LambdaCase")))
+   (when (string-match-p (rx (or "Illegal symbol ‘forall’ in type"
+                                 (seq "Perhaps you intended to use"
+                                      (* anything) "language"
+                                      (* anything) "extension"
+                                      (* anything) "to"
+                                      (* anything) "enable"
+                                      (* anything) "explicit-forall"
+                                      (* anything) "syntax")))
+                         msg)
+     (attrap-one-option (list 'use-extension "ScopedTypeVariables")
+                        (attrap-insert-language-pragma "ScopedTypeVariables")))
    (--map (attrap-option (list 'use-extension it)
             (attrap-insert-language-pragma it))
           (--filter (s-matches? it normalized-msg) attrap-haskell-extensions)))))
 
-             
 (defun attrap-add-operator-parens (name)
   "Add parens around a NAME if it refers to a Haskell operator."
   (if (string-match-p "^[[:upper:][:lower:]_']" name)
