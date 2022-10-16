@@ -8,7 +8,7 @@
 ;; URL: https://github.com/jyp/attrap
 ;; Created: February 2018
 ;; Keywords: programming, tools
-;; Package-Requires: ((dash "2.12.0") (emacs "25.1") (f "0.19.0") (flycheck "0.30") (s "1.11.0"))
+;; Package-Requires: ((dash "2.12.0") (emacs "25.1") (f "0.19.0") (s "1.11.0"))
 ;; Version: 0.2
 
 ;; This file is free software; you can redistribute it and/or modify
@@ -56,7 +56,15 @@
 ;;; Code:
 (require 'dash)
 (require 's)
-(require 'flycheck)
+
+(declare-function flycheck-error-message "ext:flycheck" (cl-x))
+(declare-function flycheck-overlays-at "ext:flycheck" (pos))
+(declare-function flycheck-get-checker-for-buffer "ext:flycheck" ())
+(declare-function flymake-diagnostics "ext:flycheck" (&optional beg end))
+(declare-function flymake-diagnostic-backend "flymake" (diag))
+(declare-function flymake-diagnostic-beg "flymake" (diag))
+(declare-function flymake-diagnostic-end "flymake" (diag))
+(declare-function flymake-diagnostic-text "flymake" (diag))
 
 (defcustom attrap-flycheck-checkers-alist '((haskell-dante . attrap-ghc-fixer)
                                             (emacs-lisp . attrap-elisp-fixer))
