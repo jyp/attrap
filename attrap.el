@@ -74,6 +74,7 @@
 
 (defcustom attrap-flymake-backends-alist
   '((dante-flymake . attrap-ghc-fixer)
+    (hlint-flymake . attrap-hlint-fixer)
     (elisp-flymake-byte-compile . attrap-elisp-fixer)
     (elisp-flymake-checkdoc . attrap-elisp-fixer))
   "An alist from flymake backend to attrap fixer."
@@ -142,7 +143,7 @@
    ((and (bound-and-true-p flyspell-mode)
          (-any #'flyspell-overlay-p (overlays-at (point))))
     (unless (fboundp 'flyspell-correct-at-point)
-      (error "Expecting the package flyspell-correct-ivy to be installed."))
+      (error "Expecting the package flyspell-correct-ivy to be installed"))
     (flyspell-correct-at-point))
    ((bound-and-true-p flymake-mode) (attrap-flymake pos))
    ((bound-and-true-p flycheck-mode) (attrap-flycheck pos))
@@ -487,6 +488,33 @@ usage: (attrap-alternatives CLAUSES...)"
   (if (string-match-p "^[[:upper:][:lower:]_']" name)
       name
     (concat "(" name ")")))
+
+(defun attrap-hlint-fixer (msg pos end)
+  "Fixer for any hlint hint given as MSG and reported between POS and END."
+  (attrap-alternatives
+   ((or
+     (s-matches? "Unused LANGUAGE pragma" msg)
+     (s-matches? "Use fewer LANGUAGE pragmas" msg))
+    (attrap-one-option 'kill-pragma
+      (delete-region pos (+ 2 end))))
+   ((s-matches? (rx "Redundant $") msg)
+    (attrap-one-option 'delete
+      (delete-region pos (+ 1 end))))
+   ((s-matches? (rx "Redundant bracket") msg)
+    (attrap-one-option 'delete
+      (delete-region pos (1+ pos))
+      (delete-region (1- end) end)))))
+   ;; ((string-match
+   ;;   (rx "Found:\n  " (group (+ not-newline)) "\nPerhaps:\n  " (group (+ not-newline))) msg)
+   ;;  (let ((replacement (match-string 2 msg)))
+   ;;    (attrap-one-option 'apply-hint
+   ;;      (delete-region pos (+ 1 end))
+   ;;      (insert replacement)
+   ;;      )))
+   )
+     
+     
+
 
 (provide 'attrap)
 ;;; attrap.el ends here
