@@ -35,6 +35,17 @@ adding the appropriate hook to the haskell mode:
               (add-hook 'flymake-diagnostic-functions 'attrap-flymake-hlint nil t)))
 #+end_src
 
+Unfortunately there is no direct support for flycheck at the moment.
+
+# , you can chain activate the hlint
+# checker in addition to the dante checker by calling
+# ~flycheck-add-next-checker~ as follows:
+
+# #+BEGIN_SRC elisp
+#   (flycheck-add-next-checker 'haskell-dante '(info . haskell-hlint))
+# #+END_SRC
+
+
 
 * Note for GHC users
 
