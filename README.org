@@ -1,16 +1,19 @@
-* Attrap: Emacs mode to fix the flycheck error at point
+* Attrap: ATtempt To Repair At Point
+
+This is an Emacs minor mode which automates the application of
+hints in messages reported through flymake or flycheck.
 
 [[https://melpa.org/packages/attrap-badge.svg]]
 [[https://stable.melpa.org/#/dante][https://stable.melpa.org/packages/attrap-badge.svg]]
 
-Attrap! provides a command to attempt to fix the flycheck error at point.
-
-Invoke the command ~attrap-attrap~ when point is on a flycheck error,
+Attrap! provides a single entry point to attempt to fix the error at
+point.
+Invoke the command ~attrap-attrap~ when point is on a flymake or flycheck error,
 and check the results.  Attrap! currently comes with fixers for
-~haskell-dante~ and ~emacs-lisp~. Support for other flycheck
-checkers can be added dynamically (see ~attrap.el~).
+~emacs-lisp~, [[https://github.com/jyp/dante/][~dante~]] and ~hlint~. Support for other
+checkers can be added dynamically (See ~M-x customize-group attrap~ for the documentation).
 
-Installation with ~use-package~:
+* Installation with ~use-package~:
 
 #+BEGIN_SRC elisp
 (use-package attrap
@@ -18,7 +21,22 @@ Installation with ~use-package~:
   :bind (("C-x /" . attrap-attrap))) ;; use any binding of your choice
 #+END_SRC
 
-** Note for GHC users
+* Configuration of the ~hlint~ checker
+
+Attrap requires a flymake checker for hlint. It should be setup by
+adding the appropriate hook to the haskell mode:
+
+#+begin_src elisp
+  (add-hook 'haskell-mode-hook
+            (defun my/haskell-hook ()
+              (require 'attrap)
+              (require 'flymake-flycheck)
+              (flymake-mode)
+              (add-hook 'flymake-diagnostic-functions 'attrap-flymake-hlint nil t)))
+#+end_src
+
+
+* Note for GHC users
 
 Attrap assumes that GHC outputs unicode symbols in error messages,
 which will happen only if $LANG is set to a proper value, such as
