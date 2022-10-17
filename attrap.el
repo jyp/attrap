@@ -225,11 +225,11 @@ The body is code that performs the fix."
 
 (defmacro attrap-alternatives (&rest clauses)
   "Append all succeeding clauses.
-Each clause looks like (CONDITION BODY...).  CONDITION is evaluated
-and, if the value is non-nil, this clause succeeds:
+Each clause looks like (CONDITION BODY...).  CONDITION is
+evaluated and, if the value is non-nil, this clause succeeds:
 then the expressions in BODY are evaluated and the last one's
-value is a list which is appended to the result of `attrap-alternatives'.
-usage: (attrap-alternatives CLAUSES...)"
+value is a list which is appended to the result of
+`attrap-alternatives'.  Usage: (attrap-alternatives CLAUSES...)"
   `(append ,@(mapcar (lambda (c) `(when ,(car c) ,@(cdr c))) clauses)))
 
 (defun attrap-elisp-fixer (msg _beg _end)
@@ -491,27 +491,30 @@ usage: (attrap-alternatives CLAUSES...)"
 
 (defun attrap-hlint-fixer (msg pos end)
   "Fixer for any hlint hint given as MSG and reported between POS and END."
-  (attrap-alternatives
+  (cond
    ((or
      (s-matches? "Unused LANGUAGE pragma" msg)
      (s-matches? "Use fewer LANGUAGE pragmas" msg))
     (attrap-one-option 'kill-pragma
       (delete-region pos (+ 2 end))))
    ((s-matches? (rx "Redundant $") msg)
-    (attrap-one-option 'delete
+    (attrap-one-option 'kill-dollar
       (delete-region pos (+ 1 end))))
    ((s-matches? (rx "Redundant bracket") msg)
-    (attrap-one-option 'delete
+    (attrap-one-option 'kill-brackets
       (delete-region pos (1+ pos))
-      (delete-region (1- end) end)))))
-   ;; ((string-match
-   ;;   (rx "Found:\n  " (group (+ not-newline)) "\nPerhaps:\n  " (group (+ not-newline))) msg)
-   ;;  (let ((replacement (match-string 2 msg)))
-   ;;    (attrap-one-option 'apply-hint
-   ;;      (delete-region pos (+ 1 end))
-   ;;      (insert replacement)
-   ;;      )))
-   )
+      (delete-region (1- end) end)))
+   ((string-match
+     (rx "Found:\n  "
+         (group (+ anychar))
+         "\nPerhaps:\n  "
+         (group (+ anychar))
+         "[haskell-hlint]")
+     msg)
+    (let ((replacement (match-string 2 msg)))
+      (attrap-one-option 'replace-as-hinted
+        (delete-region pos (+ 1 end))
+        (insert (s-collapse-whitespace replacement)))))))
      
      
 
