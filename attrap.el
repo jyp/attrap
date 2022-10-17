@@ -72,9 +72,14 @@
   :type '(alist :key-type symbol :value-type function)
   :group 'attrap)
 
+(declare-function flymake-flycheck-diagnostic-function-for 'flymake-flycheck (checker))
+(with-eval-after-load 'flymake-flycheck
+  (defalias 'attrap-flymake-hlint
+    (flymake-flycheck-diagnostic-function-for 'haskell-hlint)))
+
 (defcustom attrap-flymake-backends-alist
   '((dante-flymake . attrap-ghc-fixer)
-    (hlint-flymake . attrap-hlint-fixer)
+    (attrap-flymake-hlint . attrap-hlint-fixer)
     (elisp-flymake-byte-compile . attrap-elisp-fixer)
     (elisp-flymake-checkdoc . attrap-elisp-fixer))
   "An alist from flymake backend to attrap fixer."
@@ -141,10 +146,10 @@
   (interactive "d")
   (cond
    ((and (bound-and-true-p flyspell-mode)
+         (fboundp 'flyspell-overlay-p)
          (-any #'flyspell-overlay-p (overlays-at (point))))
-    (unless (fboundp 'flyspell-correct-at-point)
-      (error "Expecting the package flyspell-correct-ivy to be installed"))
-    (flyspell-correct-at-point))
+    (if (fboundp 'flyspell-correct-at-point)
+        (flyspell-correct-at-point)))
    ((bound-and-true-p flymake-mode) (attrap-flymake pos))
    ((bound-and-true-p flycheck-mode) (attrap-flycheck pos))
    (t (error "Expecting flymake or flycheck to be active"))))
@@ -282,12 +287,14 @@ value is a list which is appended to the result of
       (backward-char)
       (insert ".")))))
 
-(defun attrap-insert-language-pragma (pragma)
+(defun attrap-insert-language-pragma (extension)
+  "Insert language EXTENSION pragma at beginning of file."
   (goto-char 1)
-  (insert (concat "{-# LANGUAGE " pragma " #-}\n")))
+  (insert (concat "{-# LANGUAGE " extension " #-}\n")))
 
 (defun attrap-ghc-fixer (msg pos _end)
-  "An `attrap' fixer for any GHC error or warning given as MSG and reported between POS and END."
+  "An `attrap' fixer for any GHC error or warning.
+Error is given as MSG and reported between POS and END."
   (let ((normalized-msg (s-collapse-whitespace msg)))
   (append
    (when (string-match "Parse error in pattern: pattern" msg)
