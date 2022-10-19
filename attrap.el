@@ -296,6 +296,13 @@ value is a list which is appended to the result of
   "An `attrap' fixer for any GHC error or warning.
 Error is given as MSG and reported between POS and END."
   (let ((normalized-msg (s-collapse-whitespace msg)))
+  (rx-let ((parens (body) (seq "(" body ")"))
+           (lin-col (l c) (seq "(" (group-n l (* num)) "," (group-n c (* num))")"))
+           (multiline-span (l1 c1 l2 c2) (seq (lin-col l1 c1) "-" (lin-col l2 c2)))
+           (monoline-span (l1 c1 l2 c2) (seq (group-n l2 (group-n l1 (* num))) ":" (group-n c1 (* num)) "-" (group-n c2 (* num))))
+           (any-span (l1 c1 l2 c2) (or (monoline-span l1 c1 l2 c2) (multiline-span l1 c1 l2 c2)))
+           (src-loc (l1 c1 l2 c2) (seq (* (not ":"))":" (any-span l1 c1 l2 c2)))
+           (identifier (n) (seq "‘" (group-n n (* (not "’"))) "’")))
   (append
    (when (string-match "Parse error in pattern: pattern" msg)
     (attrap-one-option (list 'use-extension "PatternSynonyms")
@@ -391,13 +398,16 @@ Error is given as MSG and reported between POS and END."
         (search-forward (match-string 1 msg))
         (delete-region (match-beginning 0) (point))
         (insert replacement))))
-   (when (string-match "Perhaps you want to add ‘\\(.*\\)’ to the import list[\n\t ]+in the import of[ \n\t]*‘.*’[\n\t ]+([^:]*:\\([0-9]*\\):[0-9]*-\\([0-9]*\\))" msg)
+   (when-let ((match (s-match (rx "Perhaps you want to add " (identifier 1)
+                                  " to the import list in the import of " (identifier 2)
+                                  " " (parens (src-loc 3 4 5 6)))
+                              normalized-msg)))
     (attrap-one-option 'add-to-import-list
-      (let ((missing (match-string 1 msg))
-            (line (string-to-number (match-string 2 msg)))
-            (end-col (string-to-number (match-string 3 msg))))
+      (let ((missing (nth 1 match))
+            (end-line (string-to-number (nth 5 match)))
+            (end-col (string-to-number (nth 6 match))))
         (goto-char (point-min))
-        (forward-line (1- line))
+        (forward-line (1- end-line))
         (move-to-column (1- end-col))
         (skip-chars-backward " \t")
         (unless (looking-back "(" (- (point) 2)) (insert ","))
@@ -420,7 +430,10 @@ Error is given as MSG and reported between POS and END."
     (let* ((delete (match-string 1 msg))
            (delete-has-paren (eq ?\( (elt delete 0)))
            (delete-no-paren (if delete-has-paren (substring delete 1 (1- (length delete))) delete))
-           (replacements (s-match-strings-all "‘\\([^’]*\\)’ (\\([^)]*\\))" msg)))
+           (replacements (s-match-strings-all
+                          (rx "Perhaps you meant " (identifier 1)
+                              " " (parens (seq "line " (group-n 2 (* num)) )))
+                          msg)))
       (--map (attrap-option (list 'replace delete-no-paren (nth 1 it) (nth 2 it))
                (goto-char pos)
                (let ((case-fold-search nil))
@@ -488,7 +501,7 @@ Error is given as MSG and reported between POS and END."
                         (attrap-insert-language-pragma "ScopedTypeVariables")))
    (--map (attrap-option (list 'use-extension it)
             (attrap-insert-language-pragma it))
-          (--filter (s-matches? it normalized-msg) attrap-haskell-extensions)))))
+          (--filter (s-matches? it normalized-msg) attrap-haskell-extensions))))))
 
 (defun attrap-add-operator-parens (name)
   "Add parens around a NAME if it refers to a Haskell operator."
