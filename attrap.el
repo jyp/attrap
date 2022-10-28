@@ -287,10 +287,24 @@ value is a list which is appended to the result of
       (backward-char)
       (insert ".")))))
 
-(defun attrap-insert-language-pragma (extension)
-  "Insert language EXTENSION pragma at beginning of file."
-  (goto-char 1)
-  (insert (concat "{-# LANGUAGE " extension " #-}\n")))
+(defmacro attrap-insert-language-pragma (extension)
+  "Action: Insert language language EXTENSION pragma at beginning of file."
+  `(attrap-one-option (list 'use-extension ,extension)
+    (goto-char 1)
+    (insert (concat "{-# LANGUAGE " ,extension " #-}\n"))))
+
+(defmacro attrap-add-to-import (missing module line col)
+  "Action: insert MISSING to the import of MODULE.
+The import ends at LINE and COL in the file."
+  `(attrap-option (list 'add-to-import-list ,module)
+     (let ((end-line (string-to-number ,line))
+           (end-col (string-to-number ,col)))
+       (goto-char (point-min))
+       (forward-line (1- end-line))
+       (move-to-column (1- end-col))
+       (skip-chars-backward " \t")
+       (unless (looking-back "(" (- (point) 2)) (insert ","))
+       (insert (attrap-add-operator-parens ,missing)))))
 
 (defun attrap-ghc-fixer (msg pos _end)
   "An `attrap' fixer for any GHC error or warning.
@@ -305,8 +319,7 @@ Error is given as MSG and reported between POS and END."
            (identifier (n) (seq "‘" (group-n n (* (not "’"))) "’")))
   (append
    (when (string-match "Parse error in pattern: pattern" msg)
-    (attrap-one-option (list 'use-extension "PatternSynonyms")
-      (attrap-insert-language-pragma "PatternSynonyms")))
+     (attrap-insert-language-pragma "PatternSynonyms"))
    (when (string-match "No explicit implementation for" msg)
     (attrap-one-option 'insert-method
       (let ((missings (s-match-strings-all "‘\\([^’]*\\)’"
@@ -331,9 +344,9 @@ Error is given as MSG and reported between POS and END."
    (when (string-match "Valid hole fits include" msg)
     (let* ((options (-map 'cadr (-non-nil (--map (s-match "[ ]*\\([^ ]*\\) ::" it) (s-split "\n" (substring msg (match-end 0))))))))
       (--map (attrap-option (list 'plug-hole it)
-                     (goto-char pos)
-                     (delete-char 1)
-                     (insert it))
+               (goto-char pos)
+               (delete-char 1)
+               (insert it))
              options)))
    (when (string-match "Redundant constraints?: (?\\([^,)\n]*\\)" msg)
     (attrap-one-option 'delete-reduntant-constraint
@@ -402,16 +415,12 @@ Error is given as MSG and reported between POS and END."
                                   " to the import list in the import of " (identifier 2)
                                   " " (parens (src-loc 3 4 5 6)))
                               normalized-msg)))
-    (attrap-one-option 'add-to-import-list
-      (let ((missing (nth 1 match))
-            (end-line (string-to-number (nth 5 match)))
-            (end-col (string-to-number (nth 6 match))))
-        (goto-char (point-min))
-        (forward-line (1- end-line))
-        (move-to-column (1- end-col))
-        (skip-chars-backward " \t")
-        (unless (looking-back "(" (- (point) 2)) (insert ","))
-        (insert (attrap-add-operator-parens missing)))))
+     (list (attrap-add-to-import (nth 1 match) (nth 2 match) (nth 5 match) (nth 6 match))))
+   (when-let ((match (s-match (rx "Perhaps you want to add " (identifier 1)
+                                  " to one of these import lists:")
+                              normalized-msg)))
+     (--map (attrap-add-to-import (nth 1 match) (nth 2 it) (nth 5 it) (nth 6 it))
+            (s-match-strings-all (rx (identifier 2) " " (parens (src-loc 3 4 5 6))) msg)))
     ;; Not in scope: data constructor ‘SimpleBroadcast’
     ;; Perhaps you meant ‘SimpleBroadCast’ (imported from TypedFlow.Types)
     ;; Not in scope: ‘BackCore.argmax’
@@ -487,17 +496,14 @@ Error is given as MSG and reported between POS and END."
               (save-excursion
                 (goto-char pos)
                 (string-match-p (rx "\\case\\_>") (buffer-substring-no-properties pos (line-end-position)))))
-     (attrap-one-option (list 'use-extension "LambdaCase")
-                        (attrap-insert-language-pragma "LambdaCase")))
+     (attrap-insert-language-pragma "LambdaCase"))
    (when (s-matches? (rx (or "Illegal symbol ‘forall’ in type"
                              (seq "Perhaps you intended to use"
                                   (* anything)
                                   "language extension to enable explicit-forall syntax")))
                      normalized-msg)
-     (attrap-one-option (list 'use-extension "ScopedTypeVariables")
-                        (attrap-insert-language-pragma "ScopedTypeVariables")))
-   (--map (attrap-option (list 'use-extension it)
-            (attrap-insert-language-pragma it))
+     (attrap-insert-language-pragma "ScopedTypeVariables"))
+   (--map (attrap-insert-language-pragma it)
           (--filter (s-matches? it normalized-msg) attrap-haskell-extensions))))))
 
 (defun attrap-add-operator-parens (name)
