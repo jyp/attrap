@@ -97,6 +97,7 @@
                                                  nil
                                                  t)
                                 named-options))))
+    (message "SELECTED-FIX: %s" selected-fix)
     (message "Applied %s" (car selected-fix))
     (save-excursion
       (funcall (cdr selected-fix)))))
@@ -289,7 +290,7 @@ value is a list which is appended to the result of
 
 (defmacro attrap-insert-language-pragma (extension)
   "Action: Insert language language EXTENSION pragma at beginning of file."
-  `(attrap-one-option (list 'use-extension ,extension)
+  `(attrap-option (list 'use-extension ,extension)
     (goto-char 1)
     (insert (concat "{-# LANGUAGE " ,extension " #-}\n"))))
 
