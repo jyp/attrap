@@ -317,6 +317,7 @@ Error is given as MSG and reported between POS and END."
            (monoline-span (l1 c1 l2 c2) (seq (group-n l2 (group-n l1 (* num))) ":" (group-n c1 (* num)) "-" (group-n c2 (* num))))
            (any-span (l1 c1 l2 c2) (or (monoline-span l1 c1 l2 c2) (multiline-span l1 c1 l2 c2)))
            (src-loc (l1 c1 l2 c2) (seq (* (not ":"))":" (any-span l1 c1 l2 c2)))
+           (module-name (+ (any "_." alphanumeric)))
            (identifier (n) (seq "‘" (group-n n (* (not "’"))) "’")))
   (append
    (when (string-match "Parse error in pattern: pattern" msg)
@@ -439,10 +440,10 @@ Error is given as MSG and reported between POS and END."
     (let* ((delete (nth 1 match))
            (delete-has-paren (eq ?\( (elt delete 0)))
            (delete-no-paren (if delete-has-paren (substring delete 1 (1- (length delete))) delete))
-           (rest (nth 1 (s-match (rx "Perhaps you meant" (? "one of these:") (group (+ anychar))) msg)))
+           (rest (nth 1 (s-match (rx "Perhaps you meant" (? " one of these:") (group (+ anychar))) normalized-msg)))
            (replacements (s-match-strings-all
                           (rx (identifier 1) " "
-                              (parens (or (seq "imported from " (group-n 2 (+ not-newline )))
+                              (parens (or (seq "imported from " (group-n 2 module-name))
                                           (group-n 2 (seq "line "  (* num))))))
                           rest)))
       (--map (attrap-option (list 'replace delete-no-paren 'by (nth 1 it) 'from (nth 2 it))
