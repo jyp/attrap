@@ -97,8 +97,8 @@
                                                  nil
                                                  t)
                                 named-options))))
-    (message "SELECTED-FIX: %s" selected-fix)
-    (message "Applied %s" (car selected-fix))
+    ;; (message "SELECTED-FIX: %s" selected-fix)
+    ;; (message "Applied %s" (car selected-fix))
     (save-excursion
       (funcall (cdr selected-fix)))))
 
