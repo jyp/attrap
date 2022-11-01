@@ -483,7 +483,7 @@ Error is given as MSG and reported between POS and END."
             (replace-match "")
             (when (looking-at "(..)") (delete-char 4))
             (when (looking-at ",") (delete-char 1)))))))
-   (when (string-match "The import of ‘[^’]*’ is redundant" msg)
+   (when (string-match (rx "The " (? "qualified ") "import of " (identifier 1) " is redundant") msg)
     (attrap-one-option 'delete-module-import
       (beginning-of-line)
       (delete-region (point) (progn (next-logical-line) (point)))))
