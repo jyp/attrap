@@ -351,7 +351,7 @@ Error is given as MSG and reported between POS and END."
                (insert it))
              options)))
    (when (string-match "Redundant constraints?: (?\\([^,)\n]*\\)" msg)
-    (attrap-one-option 'delete-reduntant-constraint
+    (attrap-one-option 'delete-redundant-constraint
       (let ((constraint (match-string 1 msg)))
         (search-forward constraint) ; find type sig
         (delete-region (match-beginning 0) (match-end 0))
@@ -471,18 +471,22 @@ Error is given as MSG and reported between POS and END."
       ;; note there can be a kind annotation, not just a variable.
       (delete-region (point) (+ (point) (- (match-end 1) (match-beginning 1))))))
    ;;     Module ‘TensorFlow.GenOps.Core’ does not export ‘argmax’.
-
-   (when (string-match "The import of ‘\\(.*\\)’ from module ‘[^’]*’ is redundant\\|Module ‘.*’ does not export ‘\\(.*\\)’" normalized-msg)
+   (when (string-match
+          (rx (or (seq "The " (? "qualified ") "import of " (identifier 1) " from module " (identifier 2) " is redundant")
+                  (seq "Module " (identifier 2) " does not export " (identifier 1))))
+          normalized-msg)
     (attrap-one-option 'delete-import
       (let ((redundant (or (match-string 1 normalized-msg) (match-string 2 normalized-msg))))
-        (dolist (r (s-split ", " redundant t))
+        (save-excursion
+          (search-forward "(") ; the imported things are after the parenthesis
+          (dolist (r (s-split ", " redundant t))
           (save-excursion
-            ;; todo check for operators
-            ;; toto search for full words
-            (search-forward r)
+            (re-search-forward (rx-to-string (if (s-matches? (rx bol alphanumeric) r)
+                                                 `(seq word-start ,r word-end) ; regular ident
+                                               `(seq "(" ,r ")")))) ; operator
             (replace-match "")
             (when (looking-at "(..)") (delete-char 4))
-            (when (looking-at ",") (delete-char 1)))))))
+            (when (looking-at ",") (delete-char 1))))))))
    (when (string-match (rx "The " (? "qualified ") "import of " (identifier 1) " is redundant") msg)
     (attrap-one-option 'delete-module-import
       (beginning-of-line)
