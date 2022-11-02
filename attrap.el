@@ -471,12 +471,12 @@ Error is given as MSG and reported between POS and END."
       ;; note there can be a kind annotation, not just a variable.
       (delete-region (point) (+ (point) (- (match-end 1) (match-beginning 1))))))
    ;;     Module ‘TensorFlow.GenOps.Core’ does not export ‘argmax’.
-   (when (string-match
-          (rx (or (seq "The " (? "qualified ") "import of " (identifier 1) " from module " (identifier 2) " is redundant")
-                  (seq "Module " (identifier 2) " does not export " (identifier 1))))
-          normalized-msg)
+   (when-let ((match (s-match (rx (or (seq "The " (? "qualified ") "import of " (identifier 1)
+                                           " from module " (identifier 2) " is redundant")
+                                      (seq "Module " (identifier 2) " does not export " (identifier 1))))
+                        normalized-msg)))
     (attrap-one-option 'delete-import
-      (let ((redundant (or (match-string 1 normalized-msg) (match-string 2 normalized-msg))))
+      (let ((redundant (nth 1 match)))
         (save-excursion
           (search-forward "(") ; the imported things are after the parenthesis
           (dolist (r (s-split ", " redundant t))
