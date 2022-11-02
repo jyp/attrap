@@ -79,6 +79,7 @@
 
 (defcustom attrap-flymake-backends-alist
   '((dante-flymake . attrap-ghc-fixer)
+    (LaTeX-flymake . attrap-LaTeX-fixer)
     (attrap-flymake-hlint . attrap-hlint-fixer)
     (elisp-flymake-byte-compile . attrap-elisp-fixer)
     (elisp-flymake-checkdoc . attrap-elisp-fixer))
@@ -547,6 +548,21 @@ Error is given as MSG and reported between POS and END."
       (attrap-one-option 'replace-as-hinted
         (delete-region pos (+ 1 end))
         (insert (s-trim (s-collapse-whitespace replacement)))))))))
+
+(defun attrap-LaTeX-fixer (msg pos end)
+  (cond
+   ((s-matches? (rx "Non-breaking space (`~') should have been used.") msg)
+    (attrap-one-option 'non-breaking-space
+      (if (looking-at (rx space))
+          (delete-region pos (1+ pos))
+          (delete-region (save-excursion (skip-chars-backward "\n\t ") (point)) (point)))
+      (insert "~")))
+   ((s-matches? (rx "Delete this space to maintain correct pagereferences.") msg)
+    (attrap-one-option 'fix-space-pageref
+      (if (looking-back (rx bol (* space)))
+          (progn (skip-chars-backward "\n\t ")
+                 (insert "%"))
+        (delete-region (point) (save-excursion (skip-chars-forward " \t") (point))))))))
 
 (provide 'attrap)
 ;;; attrap.el ends here
