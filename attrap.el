@@ -551,12 +551,24 @@ Error is given as MSG and reported between POS and END."
 
 (defun attrap-LaTeX-fixer (msg pos end)
   (cond
+   
+   ((s-matches? (rx "Use either `` or '' as an alternative to `\"'.")msg) 
+    (list (attrap-option 'fix-open-dquote
+            (delete-region pos (1+ pos))
+            (insert "``"))
+          (attrap-option 'fix-close-dquote
+            (delete-region pos (1+ pos))
+            (insert "''"))))
    ((s-matches? (rx "Non-breaking space (`~') should have been used.") msg)
     (attrap-one-option 'non-breaking-space
       (if (looking-at (rx space))
           (delete-region pos (1+ pos))
           (delete-region (save-excursion (skip-chars-backward "\n\t ") (point)) (point)))
       (insert "~")))
+   ((s-matches? (rx "Interword spacing (`\\ ') should perhaps be used.") msg)
+    (attrap-one-option 'use-interword-spacing
+      (delete-region pos (1+ pos))
+      (insert "\\ ")))
    ((s-matches? (rx "Delete this space to maintain correct pagereferences.") msg)
     (attrap-one-option 'fix-space-pageref
       (if (looking-back (rx bol (* space)))
