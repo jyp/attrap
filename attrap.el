@@ -489,12 +489,22 @@ Error is given as MSG and reported between POS and END."
                                                `(seq "(" ,r ")")))) ; operator
             (replace-match "")
             (when (looking-at "(..)") (delete-char 4))
-            (when (looking-back (rx "," (* space)) (line-beginning-position))
-              (delete-region (save-excursion (search-backward ",")) (point)))))))))
+            (when (or (looking-at (rx (* space) ","))
+                      (looking-back (rx "," (* space)) (line-beginning-position)))
+              (replace-match ""))))))))
    (when (string-match (rx "The " (? "qualified ") "import of " (identifier 1) " is redundant") msg)
     (attrap-one-option 'delete-module-import
-      (beginning-of-line)
-      (delete-region (point) (progn (next-logical-line) (point)))))
+      (delete-region
+       (point)
+       (progn
+         (unless (looking-at
+                  (rx "import" (+ space) module-name (? (+ space) "hiding") (* space)))
+           (error "import statement not found"))
+         (goto-char (match-end 0))
+         (when (looking-at "(") ; skip the import list if any
+           (forward-sexp))
+         (skip-chars-forward "\t\n ")
+         (point)))))
    (when (string-match "Found type wildcard ‘\\(.*\\)’[ \t\n]*standing for ‘\\([^’]*\\)’" msg)
     (attrap-one-option 'explicit-type-wildcard
       (let ((wildcard (match-string 1 msg))
