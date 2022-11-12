@@ -322,7 +322,7 @@ Error is given as MSG and reported between POS and END."
            (identifier (n) (seq "‘" (group-n n (* (not "’"))) "’")))
   (append
    (when (string-match "Parse error in pattern: pattern" msg)
-     (attrap-insert-language-pragma "PatternSynonyms"))
+     (list (attrap-insert-language-pragma "PatternSynonyms")))
    (when (string-match "No explicit implementation for" msg)
     (attrap-one-option 'insert-method
       (let ((missings (s-match-strings-all "‘\\([^’]*\\)’"
@@ -516,13 +516,13 @@ Error is given as MSG and reported between POS and END."
               (save-excursion
                 (goto-char pos)
                 (string-match-p (rx "\\case\\_>") (buffer-substring-no-properties pos (line-end-position)))))
-     (attrap-insert-language-pragma "LambdaCase"))
+     (list (attrap-insert-language-pragma "LambdaCase")))
    (when (s-matches? (rx (or "Illegal symbol ‘forall’ in type"
                              (seq "Perhaps you intended to use"
                                   (* anything)
                                   "language extension to enable explicit-forall syntax")))
                      normalized-msg)
-     (attrap-insert-language-pragma "ScopedTypeVariables"))
+     (list (attrap-insert-language-pragma "ScopedTypeVariables")))
    (--map (attrap-insert-language-pragma it)
           (--filter (s-matches? it normalized-msg) attrap-haskell-extensions))))))
 
