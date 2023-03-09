@@ -527,7 +527,7 @@ Error is given as MSG and reported between POS and END."
                                   (* anything)
                                   "language extension to enable explicit-forall syntax")))
                      normalized-msg)
-     (attrap-insert-language-pragma "ScopedTypeVariables"))
+     (list (attrap-insert-language-pragma "ScopedTypeVariables")))
    (when-let (match (s-match (rx "Fields of " (identifier 1) " not initialised: "
                                  (group-n 2 (+ (not (any "•")))) "•")
                              msg))
