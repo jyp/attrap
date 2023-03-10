@@ -160,6 +160,7 @@
   '("AllowAmbiguousTypes"
     "BangPatterns"
     "ConstraintKinds"
+    "ConstrainedClassMethods"
     "DataKinds"
     "DefaultSignatures"
     "DeriveAnyClass"
