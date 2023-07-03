@@ -258,6 +258,9 @@ value is a list which is appended to the result of
       (let ((case-fold-search nil))
         (re-search-forward "emacs" (line-end-position))
         (replace-match "Emacs" nil t nil 0))))
+   ((string-match "should be capitalized" msg)
+    (attrap-one-option 'capitalize
+      (capitalize-word 1)))
    ((string-match "White space found at end of line" msg)
     (attrap-one-option 'delete-trailing-space
       (end-of-line)
@@ -286,8 +289,6 @@ value is a list which is appended to the result of
       (delete-char 1)))
    ((string-match "First sentence should end with punctuation" msg)
     (attrap-one-option 'add-punctuation
-      (end-of-line)
-      (backward-char)
       (insert ".")))))
 
 (defmacro attrap-insert-language-pragma (extension)
