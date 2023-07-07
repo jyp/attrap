@@ -242,54 +242,61 @@ value is a list which is appended to the result of
 
 (defun attrap-elisp-fixer (msg _beg _end)
   "An `attrap' fixer for any elisp warning given as MSG."
-  (attrap-alternatives
-   ((string-match "Lisp symbol ‘\\(.*\\)’ should appear in quotes" msg)
-    (attrap-one-option 'kill-message-period
-      (let ((sym (match-string 1 msg)))
-        (re-search-forward sym)
-        (replace-match (concat "`" sym "'") nil t nil 0))))
-   ((string-match "Error messages should \\*not\\* end with a period" msg)
-    (attrap-one-option 'kill-message-period
-      (let ((case-fold-search nil))
-        (re-search-forward "\\.\"" (line-end-position))
-        (replace-match "\"" nil t nil 0))))
-   ((string-match "Name emacs should appear capitalized as Emacs" msg)
-    (attrap-one-option 'capitalize-emacs
-      (let ((case-fold-search nil))
-        (re-search-forward "emacs" (line-end-position))
-        (replace-match "Emacs" nil t nil 0))))
-   ((string-match "should be capitalized" msg)
-    (attrap-one-option 'capitalize
-      (capitalize-word 1)))
-   ((string-match "White space found at end of line" msg)
-    (attrap-one-option 'delete-trailing-space
-      (end-of-line)
-      (delete-region (point) (progn (skip-chars-backward "\t ") (point)))))
-   ((string-match "There should be two spaces after a period" msg)
-    (attrap-one-option 'add-space
-      (beginning-of-line)
-      (re-search-forward "\\(\\.\\) [^ ]" (line-end-position))
-      (replace-match ". " nil t nil 1)))
-   ((string-match "might as well have a documentation" msg)
-    (attrap-one-option 'add-empty-doc
-      (beginning-of-line)
-      (insert "  \"\"\n")))
-   ((string-match "should have documentation" msg)
-    (attrap-one-option 'add-empty-doc
-      (beginning-of-line)
-      (insert "  \"\"\n")))
-   ((string-match "The footer should be: " msg)
-    (let ((footer (s-replace "\\n" "\n" (substring msg (match-end 0)))))
-      (attrap-one-option 'add-footer
-        (end-of-line)
-        (insert (concat "\n" footer)))))
-   ((string-match "First line is not a complete sentence" msg)
-    (attrap-one-option 'merge-lines
-      (end-of-line)
-      (delete-char 1)))
-   ((string-match "First sentence should end with punctuation" msg)
-    (attrap-one-option 'add-punctuation
-      (insert ".")))))
+  (append
+   (when-let ((match (s-match "You should have a section marked \"\\(.*\\)\"" msg)))
+     (attrap-one-option 'insert-section-header
+       (beginning-of-line)
+       (insert (nth 1 match) "\n")))
+   (when (string-match "Lisp symbol ‘\\(.*\\)’ should appear in quotes" msg)
+     (attrap-one-option 'kill-message-period
+       (let ((sym (match-string 1 msg)))
+         (re-search-forward sym)
+         (replace-match (concat "`" sym "'") nil t nil 0))))
+   (when (string-match "Error messages should \\*not\\* end with a period" msg)
+     (attrap-one-option 'kill-message-period
+       (let ((case-fold-search nil))
+         (re-search-forward "\\.\"" (line-end-position))
+         (replace-match "\"" nil t nil 0))))
+   (when (string-match "Name emacs should appear capitalized as Emacs" msg)
+     (attrap-one-option 'capitalize-emacs
+       (let ((case-fold-search nil))
+         (re-search-forward "emacs" (line-end-position))
+         (replace-match "Emacs" nil t nil 0))))
+   (when (string-match "should be capitalized" msg)
+     (attrap-one-option 'capitalize
+       (capitalize-word 1)))
+   (when (string-match "You should have a section marked \"" msg)
+     (attrap-one-option 'capitalize
+       (capitalize-word 1)))
+   (when (string-match "White space found at end of line" msg)
+     (attrap-one-option 'delete-trailing-space
+       (end-of-line)
+       (delete-region (point) (progn (skip-chars-backward "\t ") (point)))))
+   (when (string-match "There should be two spaces after a period" msg)
+     (attrap-one-option 'add-space
+       (beginning-of-line)
+       (re-search-forward "\\(\\.\\) [^ ]" (line-end-position))
+       (replace-match ". " nil t nil 1)))
+   (when (string-match "might as well have a documentation" msg)
+     (attrap-one-option 'add-empty-doc
+       (beginning-of-line)
+       (insert "  \"\"\n")))
+   (when (string-match "should have documentation" msg)
+     (attrap-one-option 'add-empty-doc
+       (beginning-of-line)
+       (insert "  \"\"\n")))
+   (when (string-match "The footer should be: " msg)
+     (let ((footer (s-replace "\\n" "\n" (substring msg (match-end 0)))))
+       (attrap-one-option 'add-footer
+         (end-of-line)
+         (insert (concat "\n" footer)))))
+   (when (string-match "First line is not a complete sentence" msg)
+     (attrap-one-option 'merge-lines
+       (end-of-line)
+       (delete-char 1)))
+   (when (string-match "First sentence should end with punctuation" msg)
+     (attrap-one-option 'add-punctuation
+       (insert ".")))))
 
 (defmacro attrap-insert-language-pragma (extension)
   "Action: Insert language language EXTENSION pragma at beginning of file."
