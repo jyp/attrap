@@ -169,6 +169,7 @@
     "DeriveFunctor"
     "DeriveGeneric"
     "DeriveTraversable"
+    "DerivingStrategies"
     "EmptyCase"
     "EmptyDataDecls"
     "EmptyDataDeriving"
