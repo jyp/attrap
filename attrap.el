@@ -170,6 +170,7 @@
     "DeriveGeneric"
     "DeriveTraversable"
     "DerivingStrategies"
+    "DerivingVia"
     "EmptyCase"
     "EmptyDataDecls"
     "EmptyDataDeriving"
