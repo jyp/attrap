@@ -657,5 +657,155 @@ Error is given as MSG and reported between POS and END."
                     (concat "''" punct)
                   (concat "\"" punct))))))))
 
+(defun attrap-python-fixer (msg beg end)
+  "Attrap fixer for common Python errors/warnings.
+MSG is the diagnostic message string.
+BEG and END are the start/end positions of the diagnostic region."
+  (require 's) ; For s-repeat
+
+  (attrap-alternatives
+
+   ;; --- Fix for E231: Missing whitespace after ',' ---
+   ((s-contains? "missing whitespace after ','" msg)
+    (attrap-one-option '(insert-space-after-comma)
+                       (goto-char beg)
+                       (when (search-forward "," end t)
+                         (insert " "))))
+
+   ;; --- Fix for E251: Unexpected spaces around keyword / parameter equals ---
+   ((s-contains? "unexpected spaces around keyword / parameter equals" msg)
+    (attrap-one-option '(remove-spaces-around-equals)
+                       (goto-char beg)
+                       (when (search-forward " = " end t)
+                         (replace-match "="))))
+
+   ;; --- Fix for W291: Trailing whitespace ---
+   ((s-contains? "trailing whitespace" msg)
+    (attrap-one-option '(delete-trailing-whitespace)
+                       (goto-char (min (1- end) (point-max))) ; Go near end, handle EOF case
+                       (end-of-line)
+                       (delete-horizontal-space)))
+
+   ;; --- Fix for W293: Blank line contains whitespace ---
+   ((s-contains? "blank line contains whitespace" msg)
+    (attrap-one-option '(delete-whitespace-on-blank-line)
+                       (goto-char beg)
+                       (beginning-of-line)
+                       (delete-horizontal-space)
+                       (beginning-of-line)))
+
+   ;; --- Robust Fix for E302: expected 2 blank lines, found M ---
+   ((string-match "E302 expected 2 blank lines, found \\([0-9]+\\)" msg)
+    (attrap-one-option '(insert-missing-blank-line/s)
+                       (let* ((m-str (match-string 1 msg))
+                              (m (if m-str (string-to-number m-str) -1))
+                              (num-to-insert (if (>= m 0) (max 0 (- 2 m)) 0)))
+                         (when (> num-to-insert 0)
+                           (goto-char beg)
+                           (insert (s-repeat num-to-insert "\n"))))))
+
+   ;; --- Fix for E303: too many blank lines (N) ---
+   ((string-match "E303 too many blank lines (\\([0-9]+\\))" msg)
+    (attrap-one-option '(delete-excess-blank-lines)
+                       (let* ((n-str (match-string 1 msg))
+                              (n (if n-str (string-to-number n-str) 0))
+                              (num-to-delete (max 0 (- n 1))))
+                         (when (> num-to-delete 0)
+                           (goto-char beg)
+                           (forward-line (- n))
+                           (forward-line 1)
+                           (let ((delete-start (point)))
+                             (forward-line num-to-delete)
+                             (let ((delete-end (point)))
+                               (delete-region delete-start delete-end)
+                               (goto-char delete-start)
+                               (beginning-of-line)))))))
+
+   ;; --- Fix for E221: multiple spaces before operator ---
+   ((s-contains? "multiple spaces before operator" msg)
+    (attrap-one-option '(delete-excess-spaces-before-operator)
+                       (goto-char beg) ; Point is at the start of the first excess space
+                       (let ((delete-end (progn (skip-chars-forward " \t") (point))))
+                         (delete-region beg delete-end)
+                         (insert " "))))
+
+   ;; --- Fix for E222: multiple spaces after operator ---
+   ((s-contains? "multiple spaces after operator" msg)
+    (attrap-one-option '(delete-excess-spaces-after-operator)
+                       (goto-char beg) ; Point is at the start of the first excess space after operator
+                       (let ((delete-end (progn (skip-chars-forward " \t") (point))))
+                         (delete-region beg delete-end)
+                         (insert " "))))
+
+   ;; --- Fix for E203: whitespace before ':' ---
+   ((s-contains? "whitespace before ':'" msg)
+    (attrap-one-option '(delete-whitespace-before-colon)
+                       (goto-char beg)
+                       (delete-horizontal-space)))
+
+   ;; --- Fix for E701: multiple statements on one line (colon) ---
+   ((s-contains? "multiple statements on one line (colon)" msg)
+    (attrap-one-option '(newline-and-indent-after-colon)
+                       (goto-char beg)
+                       (beginning-of-line)
+                       (when (search-forward ":" (line-end-position) t)
+                         (insert "\n")
+                         (indent-according-to-mode))))
+
+   ;; --- Fix for E702: multiple statements on one line (semicolon) ---
+   ((s-contains? "multiple statements on one line (semicolon)" msg)
+    (attrap-one-option '(newline-and-indent-after-semicolon)
+                       (goto-char beg)
+                       (when (search-forward ";" end t)
+                         (replace-match "\n" t t)
+                         (indent-according-to-mode))))
+
+   ;; --- Fix for E128: continuation line under-indented ---
+   ((s-contains? "continuation line under-indented" msg)
+    (attrap-one-option '(indent-continuation-line)
+                       (goto-char beg)
+                       (beginning-of-line)
+                       (indent-according-to-mode)))
+
+   ;; --- Fix for E131: continuation line unaligned ---
+   ((s-contains? "continuation line unaligned" msg)
+    (attrap-one-option '(indent-continuation-line) ; Re-use description
+                       (goto-char beg)
+                       (beginning-of-line)
+                       (indent-according-to-mode)))
+
+   ;; --- Fix for E272: multiple spaces before keyword ---
+   ((s-contains? "multiple spaces before keyword" msg)
+    (attrap-one-option '(delete-excess-spaces-before-keyword)
+                       (goto-char beg) ; Point is at the start of the first excess space
+                       (let ((delete-end (progn (skip-chars-forward " \t") (point))))
+                         (delete-region beg delete-end)
+                         (insert " "))))
+
+   ;; --- Fix for E301: expected 1 blank line, found 0 ---
+   ;; Example message: "pycodestyle [E301]: E301 expected 1 blank line, found 0"
+   ;; `beg` should be at the start of the def/class line.
+   ((string-match "E301 expected 1 blank line, found 0" msg)
+    (attrap-one-option '(insert-clean-blank-line-and-indent)
+                       (goto-char beg)
+                       (insert "\n")
+                       (beginning-of-line 0)
+                       (delete-horizontal-space)
+                       (forward-line 1)
+                       (indent-according-to-mode)))
+
+   ;; --- Robust Fix for E305: expected 2 blank lines after def/class, found M ---
+   ;; Example message: "E305 expected 2 blank lines after class or function definition, found 1"
+   ;; `beg` should be at the start of the line following the insufficient blank space.
+   ((string-match "E305 expected 2 blank lines after .* found \\([0-9]+\\)" msg)
+    (attrap-one-option '(insert-missing-blank-line/s-after-def/class)
+                       (let* ((m-str (match-string 1 msg))
+                              (m (if m-str (string-to-number m-str) -1))
+                              (num-to-insert (if (>= m 0) (max 0 (- 2 m)) 0)))
+
+                         (when (> num-to-insert 0)
+                           (goto-char beg)
+                           (insert (s-repeat num-to-insert "\n"))))))))
+
 (provide 'attrap)
 ;;; attrap.el ends here
