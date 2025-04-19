@@ -587,9 +587,9 @@ Error is given as MSG and reported between POS and END."
         (insert (s-trim (s-collapse-whitespace replacement)))))))))
 
 (defun attrap-LaTeX-fixer (msg pos _end)
-
+  "Fix LaTeX issues reported in MSG at position POS."
   (cond
-   ((s-matches? (rx "Use either `` or '' as an alternative to `\"'.")msg) 
+   ((s-matches? (rx "Use either `` or '' as an alternative to `\"'.") msg)
     (list (attrap-option 'fix-open-dquote
             (delete-region pos (1+ pos))
             (insert "``"))
@@ -600,19 +600,46 @@ Error is given as MSG and reported between POS and END."
     (attrap-one-option 'non-breaking-space
       (if (looking-at (rx space))
           (delete-region pos (1+ pos))
-          (delete-region (save-excursion (skip-chars-backward "\n\t ") (point)) (point)))
+        (delete-region (save-excursion (skip-chars-backward "\n\t ") (point))
+                       (point)))
       (insert "~")))
    ((s-matches? (rx "Interword spacing (`\\ ') should perhaps be used.") msg)
     (attrap-one-option 'use-interword-spacing
       (delete-region pos (1+ pos))
       (insert "\\ ")))
-   ((s-matches? (rx "Delete this space to maintain correct pagereferences.") msg)
+   ((s-matches? (rx "Delete this space to maintain correct pagereferences.")
+                msg)
     (attrap-one-option 'fix-space-pageref
-      (if (looking-back (rx bol (* space)))
+      (if (looking-back (rx bol (* space)) (line-beginning-position))
           (progn (skip-chars-backward "\n\t ")
                  (insert "%"))
-        (delete-region (point) (save-excursion (skip-chars-forward " \t") (point))))))))
+        (delete-region (point) (save-excursion (skip-chars-forward " \t")
+                                               (point))))))
+   ((s-matches? (rx "Intersentence spacing (`\\@') should perhaps be used.")
+                msg)
+    (attrap-one-option 'use-intersentence-spacing
+      (insert "\\@")))
+   ((s-matches? (rx "You should enclose the previous parenthesis with `{}'.")
+                msg)
+    (attrap-one-option 'enclose-with-braces
+      (forward-char)
+      (insert "}")
+      (save-excursion
+        (backward-char)
+        (backward-sexp)
+        (re-search-backward "[^[:alnum:]\\_\\/]")
+        (forward-char)
+        (insert "{")
+        )))
+   ((s-matches? (rx "You should not use punctuation in front of quotes.") msg)
+    (attrap-one-option 'swap-punctuation-with-quotes
+      (let ((punct (buffer-substring-no-properties (point) (1+ (point))))
+            (quote-type (buffer-substring-no-properties
+                         (1+ (point)) (+ (point) 3))))
+        (delete-region (point) (+ (point) 3))
+        (insert (if (string= quote-type "''")
+                    (concat "''" punct)
+                  (concat "\"" punct))))))))
 
 (provide 'attrap)
 ;;; attrap.el ends here
-
