@@ -8,7 +8,7 @@
 ;; URL: https://github.com/jyp/attrap
 ;; Created: February 2018
 ;; Keywords: programming, tools
-;; Package-Requires: ((dash "2.12.0") (emacs "25.1") (f "0.19.0") (s "1.11.0"))
+;; Package-Requires: ((dash "2.12.0") (emacs "26.1") (f "0.19.0") (s "1.11.0"))
 ;; Version: 0.2
 
 ;; This file is free software; you can redistribute it and/or modify
@@ -109,6 +109,22 @@
   (interactive "d")
   (let ((diags (flymake-diagnostics pos)))
     (when (not diags) (error "No flymake diagnostic at point"))
+
+    (when (> (length diags) 1)
+      (let* ((best-diag nil)
+             (min-dist most-positive-fixnum))
+        (dolist (current-diag diags)
+          (let* ((beg (flymake-diagnostic-beg current-diag))
+                 (end (flymake-diagnostic-end current-diag))
+                 (current-dist (if (and (numberp beg) (numberp end) (> end beg))
+                                   (abs (- pos (/ (+ beg end) 2.0)))
+                                 (if (numberp beg) (abs (- pos beg)) most-positive-fixnum))))
+            (when (< current-dist min-dist)
+              (setq min-dist current-dist)
+              (setq best-diag current-diag))))
+        (when best-diag
+          (setq diags (list best-diag)))))
+
     (attrap-select-and-apply-option
      (-non-nil (--mapcat (let ((fixer (alist-get (flymake-diagnostic-backend it)
                                                  attrap-flymake-backends-alist)))
