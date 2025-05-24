@@ -112,10 +112,12 @@
     (attrap-select-and-apply-option
      (-non-nil (--mapcat (let ((fixer (alist-get (flymake-diagnostic-backend it)
                                                  attrap-flymake-backends-alist)))
-                           (when fixer (funcall fixer
-                                                (flymake-diagnostic-text it)
-                                                (flymake-diagnostic-beg it)
-                                                (flymake-diagnostic-end it))))
+                           (when fixer
+                             (goto-char (flymake-diagnostic-beg it))
+                             (funcall fixer
+                                      (flymake-diagnostic-text it)
+                                      (flymake-diagnostic-beg it)
+                                      (flymake-diagnostic-end it))))
                          diags)))))
 
 
@@ -245,6 +247,10 @@ value is a list which is appended to the result of
 (defun attrap-elisp-fixer (msg _beg _end)
   "An `attrap' fixer for any elisp warning given as MSG."
   (append
+   (when-let ((match (s-match "The first line should be of the form: \"\\(.*\\)\"" msg)))
+     (attrap-one-option 'insert-package
+       (beginning-of-line)
+       (insert (nth 1 match) "\n")))
    (when-let ((match (s-match "You should have a section marked \"\\(.*\\)\"" msg)))
      (attrap-one-option 'insert-section-header
        (beginning-of-line)
@@ -265,9 +271,6 @@ value is a list which is appended to the result of
          (re-search-forward "emacs" (line-end-position))
          (replace-match "Emacs" nil t nil 0))))
    (when (string-match "should be capitalized" msg)
-     (attrap-one-option 'capitalize
-       (capitalize-word 1)))
-   (when (string-match "You should have a section marked \"" msg)
      (attrap-one-option 'capitalize
        (capitalize-word 1)))
    (when (string-match "White space found at end of line" msg)
@@ -330,6 +333,7 @@ Error is given as MSG and reported between POS and END."
            (any-span (l1 c1 l2 c2) (or (monoline-span l1 c1 l2 c2) (multiline-span l1 c1 l2 c2)))
            (src-loc (l1 c1 l2 c2) (seq (* (not ":"))":" (any-span l1 c1 l2 c2)))
            (module-name (+ (any "_." alphanumeric)))
+           (quoted (x) (seq "‘" x "’"))
            (identifier (n) (seq "‘" (group-n n (* (not "’"))) "’")))
   (append
    (when (string-match "Parse error in pattern: pattern" msg)
@@ -394,7 +398,7 @@ Error is given as MSG and reported between POS and END."
         (search-forward constructor)
         (backward-char (length constructor))
         (insert "'"))))
-   (when (string-match "Patterns not matched:" msg)
+   (when (string-match (rx "Patterns" (? " of type " (quoted (+ anychar)) ) " not matched:") msg)
     (attrap-one-option 'add-missing-patterns
       (let ((patterns (mapcar #'string-trim (split-string (substring msg (match-end 0)) "\n" t " ")))) ;; patterns to match
         (if (string-match "In an equation for ‘\\(.*\\)’:" msg)
@@ -452,7 +456,7 @@ Error is given as MSG and reported between POS and END."
     (let* ((delete (nth 1 match))
            (delete-has-paren (eq ?\( (elt delete 0)))
            (delete-no-paren (if delete-has-paren (substring delete 1 (1- (length delete))) delete))
-           (rest (nth 1 (s-match (rx "Perhaps you meant" (? " one of these:") (group (+ anychar))) normalized-msg)))
+           (rest (nth 1 (s-match (rx (or "Perhaps you meant" "Perhaps use") (? " one of these:") (group (+ anychar))) normalized-msg)))
            (replacements (s-match-strings-all
                           (rx (identifier 1) " "
                               (parens (or (seq "imported from " (group-n 2 module-name))
