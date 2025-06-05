@@ -591,8 +591,10 @@ Error is given as MSG and reported between POS and END."
         (insert (s-trim (s-collapse-whitespace replacement)))))))))
 
 (defun attrap-LaTeX-fixer (msg pos _end)
-
   (cond
+   ((s-matches? (rx "Command terminated with space")msg) 
+    (attrap-one-option 'add-empty-argument
+      (insert "{}")))
    ((s-matches? (rx "Use either `` or '' as an alternative to `\"'.")msg) 
     (list (attrap-option 'fix-open-dquote
             (delete-region pos (1+ pos))
