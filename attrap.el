@@ -206,6 +206,7 @@
     "TemplateHaskell"
     "TransformListComp"
     "TupleSections"
+    "TypeAbstractions"
     "TypeApplications"
     "TypeFamilies"
     "TypeFamilyDependencies"
