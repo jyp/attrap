@@ -173,6 +173,7 @@
     "DeriveTraversable"
     "DerivingStrategies"
     "DerivingVia"
+    "DisambiguateRecordFields"
     "EmptyCase"
     "EmptyDataDecls"
     "EmptyDataDeriving"
