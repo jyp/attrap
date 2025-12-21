@@ -431,7 +431,7 @@ Error is given as MSG and reported between POS and END."
         (search-forward (match-string 1 msg))
         (delete-region (match-beginning 0) (point))
         (insert replacement))))
-   (when-let ((match (s-match (rx "Perhaps you want to add " (identifier 1)
+   (when-let ((match (s-match (rx  (identifier 1)
                                   " to the import list in the import of " (identifier 2)
                                   " " (parens (src-loc 3 4 5 6)))
                               normalized-msg)))
