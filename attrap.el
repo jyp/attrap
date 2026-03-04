@@ -597,6 +597,9 @@ Error is given as MSG and reported between POS and END."
    ((s-matches? (rx "Command terminated with space")msg) 
     (attrap-one-option 'add-empty-argument
       (insert "{}")))
+   ((s-matches? (rx "You should use \\ldots to achieve an ellipsis.") msg)
+    (delete-region pos (+ 3 pos))
+    (insert "\\ldots"))
    ((s-matches? (rx "Use either `` or '' as an alternative to `\"'.")msg) 
     (list (attrap-option 'fix-open-dquote
             (delete-region pos (1+ pos))
