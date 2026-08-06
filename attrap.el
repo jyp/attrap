@@ -82,6 +82,7 @@
     (LaTeX-flymake . attrap-LaTeX-fixer)
     (attrap-flymake-hlint . attrap-hlint-fixer)
     (elisp-flymake-byte-compile . attrap-elisp-fixer)
+    (eglot-flymake-backend . attrap-eglot-fixer)
     (elisp-flymake-checkdoc . attrap-elisp-fixer))
   "An alist from flymake backend to attrap fixer."
   :type '(alist :key-type symbol :value-type function)
@@ -112,7 +113,8 @@
     (attrap-select-and-apply-option
      (-non-nil (--mapcat (let ((fixer (alist-get (flymake-diagnostic-backend it)
                                                  attrap-flymake-backends-alist)))
-                           (when fixer
+                           (if (not fixer)
+                               (message "No fixer for backend: %s" (flymake-diagnostic-backend it))
                              (goto-char (flymake-diagnostic-beg it))
                              (funcall fixer
                                       (flymake-diagnostic-text it)
@@ -245,6 +247,11 @@ then the expressions in BODY are evaluated and the last one's
 value is a list which is appended to the result of
 `attrap-alternatives'.  Usage: (attrap-alternatives CLAUSES...)"
   `(append ,@(mapcar (lambda (c) `(when ,(car c) ,@(cdr c))) clauses)))
+
+(defun attrap-eglot-fixer (_msg beg end)
+  (let* ((server (eglot--current-server-or-lose)))
+    (--map (attrap-option (plist-get it :title) (eglot-execute server it))
+           (eglot-code-actions beg end nil nil))))
 
 (defun attrap-elisp-fixer (msg _beg _end)
   "An `attrap' fixer for any elisp warning given as MSG."
